@@ -21,11 +21,17 @@ struct Material
     float opacity;
 };
 
+struct Vertex 
+{
+    vec3 pos;
+    float pad;
+};
+
 const float M_PI = 3.1415926;
 
 layout(std430, binding = 0) buffer SceneData {Sphere spheres[];};
 layout(std430, binding = 1) buffer MaterialData {Material materials[];};
-layout(std430, binding = 2) buffer VertexData {vec3 vertices[];};
+layout(std430, binding = 2) buffer VertexData {Vertex vertices[];};
 layout(std430, binding = 3) buffer IndexData {uint indices[];};
 
 uniform vec2 u_resolution;
@@ -72,9 +78,9 @@ float hitTriangleIndexed(int triIndex, vec3 ro, vec3 rd)
     uint i1 = indices[3 * triIndex + 1];
     uint i2 = indices[3 * triIndex + 2];
 
-    vec3 v0 = vertices[i0];
-    vec3 v1 = vertices[i1];
-    vec3 v2 = vertices[i2];
+    vec3 v0 = vertices[i0].pos;
+    vec3 v1 = vertices[i1].pos;
+    vec3 v2 = vertices[i2].pos;
 
     vec3 edge1 = v1 - v0;
     vec3 edge2 = v2 - v0;
@@ -82,7 +88,7 @@ float hitTriangleIndexed(int triIndex, vec3 ro, vec3 rd)
     float a = dot(edge1, h);
 
     // Check parallel
-    if (a > -0.001 && a < 0.001) {return -1.0;}
+    if (abs(a) < 0.00001) {return -1.0;}
 
     float f = 1.0 / a;
     vec3 s = ro - v0;
@@ -207,7 +213,7 @@ void main()
     float tanFov = tan(radians(fov) * 0.5);
 
     const int MAX_BOUNCES = 10;
-    const int SAMPLES_PER_PIXEL = 4;
+    const int SAMPLES_PER_PIXEL = 1;
 
     // Recursive raytracing
     vec3 frameColor = vec3(0.0, 0.0, 0.0);
@@ -252,15 +258,15 @@ void main()
                     uint i1 = indices[3 * hitIndex + 1];
                     uint i2 = indices[3 * hitIndex + 2];
 
-                    vec3 v0 = vertices[i0];
-                    vec3 v1 = vertices[i1];
-                    vec3 v2 = vertices[i2];
+                    vec3 v0 = vertices[i0].pos;
+                    vec3 v1 = vertices[i1].pos;
+                    vec3 v2 = vertices[i2].pos;
 
                     vec3 edge1 = v1 - v0;
                     vec3 edge2 = v2 - v0;
 
                     normal = normalize(cross(edge1, edge2));
-                    materialIndex = 1;
+                    materialIndex = 5;
 
                     // Flip normal if hit back face
                     if (dot(normal, currentRd) > 0.0) {normal = -normal;}

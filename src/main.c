@@ -8,6 +8,7 @@
 #include "camera.h"
 #include "file_util.h"
 #include "shader_structs.h"
+#include "obj_loader.h"
 
 #ifndef M_PI
 #define M_PI 3.1415
@@ -25,7 +26,7 @@ float g_mouseSensitivity = 0.1f;
 
 int g_frameCount = 0;
 Camera g_camera = {0.0f, 0.0f, 2.0f, -90.0f, 0.0f, 1.0f};
-float g_cameraSpeed = 2.5f;
+float g_cameraSpeed = 2.0f;
 
 float g_lastFrame = 0.0f;
 float g_deltaTime = 0.0f;
@@ -254,18 +255,31 @@ const int NUM_MATERIALS = sizeof(g_materials) / sizeof(Material);
 
 void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, GLuint indexSSBO)
 {
-    // TODO: Load .obj files
+    // Mesh setup
+    MeshData mesh;
+    if (loadObj("models/monkey.obj", &mesh))
+    {
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, vertexSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GPUPackedVertex) * mesh.vertexCunt, mesh.vertices, GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, vertexSSBO);
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, indexSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t) * mesh.indexCount, mesh.indices, GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, indexSSBO);
+
+        freeMeshData(&mesh);
+    }
 
     // Sphere setup
 
-    Sphere scene[6];
+    Sphere scene[3];
 
-    scene[0] = (Sphere){0.0f, 0.0f, 0.0f, 1.0f, 1};
-    scene[1] = (Sphere){2.5f, 0.0f, 0.0f, 0.5f, 3};
-    scene[2] = (Sphere){-2.5f, 0.0f, 0.0f, 0.5f, 2}; 
-    scene[3] = (Sphere){0.0f, 0.0f, -3.0f, 1.0f, 5}; 
-    scene[4] = (Sphere){0.0f, 0.0f, 3.0f, 1.0f, 5}; 
-    scene[5] = (Sphere){0.0f, -100.0f, 0.0f, 99.0f, 5};
+    //scene[0] = (Sphere){0.0f, 0.0f, 0.0f, 1.0f, 1};
+    scene[0] = (Sphere){2.5f, 0.0f, 0.0f, 0.5f, 3};
+    scene[1] = (Sphere){-2.5f, 0.0f, 0.0f, 0.5f, 2}; 
+    //scene[3] = (Sphere){0.0f, 0.0f, -3.0f, 1.0f, 5}; 
+    //scene[4] = (Sphere){0.0f, 0.0f, 3.0f, 1.0f, 5}; 
+    scene[2] = (Sphere){0.0f, -100.0f, 0.0f, 99.0f, 5};
 
     // Sphere data
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSSBO);
