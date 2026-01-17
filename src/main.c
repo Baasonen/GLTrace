@@ -2,6 +2,7 @@
 #include <glfw3.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <math.h>
 
 #include "camera.h"
@@ -73,15 +74,15 @@ bool processInput(GLFWwindow* window)
 
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
     {
-        g_camera.px += rightX * cameraVelocity;
-        g_camera.pz += rightZ * cameraVelocity;
+        g_camera.px -= rightX * cameraVelocity;
+        g_camera.pz -= rightZ * cameraVelocity;
         moved = true;
     }
 
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
-        g_camera.px -= rightX * cameraVelocity;
-        g_camera.pz -= rightZ * cameraVelocity;
+        g_camera.px += rightX * cameraVelocity;
+        g_camera.pz += rightZ * cameraVelocity;
         moved = true;
     }
 
@@ -91,7 +92,7 @@ bool processInput(GLFWwindow* window)
         moved = true;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
     {
         g_camera.py -= cameraVelocity;
         moved = true;
@@ -154,6 +155,9 @@ GLuint compileShader(const char* filename, GLenum type)
         glDeleteShader(shader);
         return 0;
     }
+
+    free(source);
+
     return shader;
 }
 
@@ -228,7 +232,22 @@ void setupAccumulationBuffers(int width, int height)
 Material g_materials[] =
 {
     // Matte white
-    {1.0f, 1.0f, 1.0f, 0.0, 1.0f, 0.0f, 0.0f, 1.0f}
+    // Matte Green 0
+    {0.2f, 1.0f, 0.2f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f}, 
+
+    // Mirror 1
+    {1.0f, 1.0f, 1.0f, 0.0f, 0.2f, 1.0f, 0.0f, 1.0f}, 
+
+    // Emissive White 2
+    {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 10.0f, 1.0f},
+
+    {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 5.0f, 1.0f},
+
+    // Semi-Transparrent Blue 4
+    {0.2f, 0.2f, 1.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.2f}, 
+ 
+    // Matte white 5
+    {1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f} 
 };
 
 const int NUM_MATERIALS = sizeof(g_materials) / sizeof(Material);
@@ -239,9 +258,14 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
 
     // Sphere setup
 
-    Sphere scene[1];
+    Sphere scene[6];
 
-    scene[0] = (Sphere){0.0, 0.0, 0.0, 1.0f, 1};
+    scene[0] = (Sphere){0.0f, 0.0f, 0.0f, 1.0f, 1};
+    scene[1] = (Sphere){2.5f, 0.0f, 0.0f, 0.5f, 3};
+    scene[2] = (Sphere){-2.5f, 0.0f, 0.0f, 0.5f, 2}; 
+    scene[3] = (Sphere){0.0f, 0.0f, -3.0f, 1.0f, 5}; 
+    scene[4] = (Sphere){0.0f, 0.0f, 3.0f, 1.0f, 5}; 
+    scene[5] = (Sphere){0.0f, -100.0f, 0.0f, 99.0f, 5};
 
     // Sphere data
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSSBO);
@@ -307,9 +331,12 @@ int main(int argc, char* argv[])
     glGenBuffers(1, &ssboVertices);
     glGenBuffers(1, &ssboIndices);
 
+    setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices);
     
     GLuint program = createShaderProgram();
     glUseProgram(program);
+
+    setupAccumulationBuffers(WIDTH, HEIGHT);
 
     // Main loop
     while (!glfwWindowShouldClose(window))

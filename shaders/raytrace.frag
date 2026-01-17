@@ -1,10 +1,322 @@
-#version 460 core 
+#version 460 core
 
+// HEADER
 out vec4 fragColor;
 in vec2 v_uv;
 
+struct Sphere 
+{
+    vec3 pos;
+    float radius;
+    int materialIndex;
+    float padding[3];
+};
+
+struct Material
+{
+    vec4 color;
+    float roughness;
+    float metallic;
+    float emission;
+    float opacity;
+};
+
+const float M_PI = 3.1415926;
+
+layout(std430, binding = 0) buffer SceneData {Sphere spheres[];};
+layout(std430, binding = 1) buffer MaterialData {Material materials[];};
+layout(std430, binding = 2) buffer VertexData {vec3 vertices[];};
+layout(std430, binding = 3) buffer IndexData {uint indices[];};
+
+uniform vec2 u_resolution;
+uniform int u_frameCount;
+uniform sampler2D u_historyTexture;
+uniform vec3 u_cameraPos;
+uniform float u_cameraYaw;
+uniform float u_cameraPitch;
+uniform int u_isDisplayPass;
+
+uint pcgHash(inout uint state)
+{
+    state = state * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+float random(inout uint state)
+{
+    return float(pcgHash(state) * 2.3283064365386963e-10);
+}
+
+vec3 cosHemisphere(vec3 n, inout uint seed)
+{
+    float r1 = random(seed);
+    float r2 = random(seed);
+
+    float phi = 2.0 * M_PI * r1;
+    float cosTheta = sqrt(1.0 - r2);
+    float sinTheta = sqrt(r2);
+
+    vec3 localRay = vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+    
+    vec3 up = abs(n.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
+    vec3 tangent = normalize(cross(up, n));
+    vec3 biTangent = cross(n, tangent);
+
+    return tangent * localRay.x + biTangent * localRay.y + n * localRay.z;
+}
+
+float hitTriangleIndexed(int triIndex, vec3 ro, vec3 rd)
+{
+    uint i0 = indices[3 * triIndex + 0];
+    uint i1 = indices[3 * triIndex + 1];
+    uint i2 = indices[3 * triIndex + 2];
+
+    vec3 v0 = vertices[i0];
+    vec3 v1 = vertices[i1];
+    vec3 v2 = vertices[i2];
+
+    vec3 edge1 = v1 - v0;
+    vec3 edge2 = v2 - v0;
+    vec3 h = cross(rd, edge2);
+    float a = dot(edge1, h);
+
+    // Check parallel
+    if (a > -0.001 && a < 0.001) {return -1.0;}
+
+    float f = 1.0 / a;
+    vec3 s = ro - v0;
+    float u = f * dot(s, h);
+
+    if (u < 0.0 || u > 1.0) {return -1.0;}
+
+    vec3 q = cross(s, edge1);
+    float v = f * dot(rd, q);
+
+    if (v < 0.0 || u + v > 1.0) {return -1.0;}
+
+    float t = f * dot(edge2, q);
+
+    if (t > 0.001) {return t;}
+    return -1.0;
+}
+
+float hitSphere(Sphere s, vec3 ro, vec3 rd)
+{
+    vec3 oc = ro - s.pos;
+    float b = dot(oc, rd);
+    float c = dot(oc, oc) - s.radius * s.radius;
+    float h = b * b - c; // Simplified discriminant
+
+    if (h < 0.0) {return -1.0;}
+
+    // We want the closest hit
+    return -b - sqrt(h);
+}
+
+// SHADER
+
+void findClosestHit(vec3 ro, vec3 rd, out float minT, out int hitIndex, out int hitType)
+{
+    minT = 10000.0;
+    hitIndex = -1;
+    hitType = 0;
+
+    // Check for sphere
+    for(int i = 0; i < spheres.length(); i++)
+    {
+        float t = hitSphere(spheres[i], ro , rd);
+        if (t > 0.001 && t < minT)
+        {
+            minT = t;
+            hitIndex = i;
+            hitType = 1;
+        }
+    }
+
+    // Check for triangle
+    int triCount = indices.length() / 3;
+    for(int i = 0; i < triCount; i++)
+    {
+        float t = hitTriangleIndexed(i, ro, rd);
+        if (t > 0.001 && t < minT)
+        {
+            minT = t;
+            hitIndex = i;
+            hitType = 2;
+        }
+    }
+}
+
+vec3 shade(vec3 hitPos, vec3 normal, vec3 rd, int materialIndex)
+{
+    Material material = materials[materialIndex];
+    vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+    vec3 v = -rd;
+
+    // Emission
+    vec3 emissive = material.color.rgb * material.emission;
+
+    // Lambertian diffuse
+    vec3 diffuseColor = material.color.rgb * (1.0 - material.metallic);
+    float diff = max(dot(normal, lightDir), 0.0);
+    vec3 diffuse = diff * diffuseColor;
+
+    // Specular
+    vec3 specularColor = mix(vec3(0.04), material.color.rgb, material.metallic);
+    vec3 halfwayDir = normalize(lightDir + v);
+    float shininess = 1.0 / (material.roughness * material.roughness + 0.001);
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
+    vec3 specular = specularColor * spec;
+
+    // Ambient 
+    vec3 ambient = 0.1 * material.color.rgb;
+
+    return emissive + ambient + diffuse + specular;
+}
 
 void main()
 {
-    fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    if (u_isDisplayPass == 1)
+    {
+        fragColor = texture(u_historyTexture, v_uv);
+        return;
+    }
+
+    vec2 pixelCoord = gl_FragCoord.xy;
+
+    uint seed = uint(pixelCoord.x) + uint(pixelCoord.y) * uint(u_resolution) + uint(u_frameCount) * 7125413u;
+
+    // Camera
+    float aspect = u_resolution.x / u_resolution.y;
+
+    vec3 ro = u_cameraPos;
+    float yawRads = radians(u_cameraYaw);
+    float pitchRads = radians(u_cameraPitch);
+
+    vec3 forward;
+    forward.x = cos(yawRads) * cos(pitchRads);
+    forward.y = sin(pitchRads);
+    forward.z = sin(yawRads) * cos(pitchRads);
+
+    vec3 worldUp = vec3(0.0, 1.0, 0.0);
+    vec3 right = normalize(cross(forward, worldUp));
+    vec3 up = normalize(cross(right, forward));
+
+    float fov = 45.0;
+    float tanFov = tan(radians(fov) * 0.5);
+
+    const int MAX_BOUNCES = 10;
+    const int SAMPLES_PER_PIXEL = 4;
+
+    // Recursive raytracing
+    vec3 frameColor = vec3(0.0, 0.0, 0.0);
+
+    for (int s = 0; s < SAMPLES_PER_PIXEL; s++)
+    {
+        uint sampleSeed = seed + uint(s) * 9781u;
+
+        vec2 jitter = (vec2(random(sampleSeed), random(sampleSeed)) - 0.5);
+        vec2 uv = (pixelCoord + jitter) / u_resolution * 2.0 - 1.0;
+        uv.x *= aspect;
+
+        vec3 rd = normalize(forward + uv.x * tanFov * right + uv.y * tanFov * up);
+
+        vec3 accumulatedLight = vec3(0.0, 0.0, 0.0);
+        vec3 throughput = vec3(1.0, 1.0, 1.0);
+        vec3 currentRo = u_cameraPos;
+        vec3 currentRd = rd;
+
+        for (int bounce = 0; bounce < MAX_BOUNCES; bounce++)
+        {
+            float minT;
+            int hitIndex;
+            int hitType;
+            findClosestHit(currentRo, currentRd, minT, hitIndex, hitType);
+
+            if (hitIndex != -1)
+            {
+                vec3 hitPos = currentRo + currentRd * minT;
+                vec3 normal;
+                int materialIndex;
+
+                if (hitType == 1)
+                {
+                    Sphere s = spheres[hitIndex];
+                    normal = normalize(hitPos - s.pos);
+                    materialIndex = s.materialIndex;
+                }
+                else if (hitType == 2)
+                {
+                    uint i0 = indices[3 * hitIndex + 0];
+                    uint i1 = indices[3 * hitIndex + 1];
+                    uint i2 = indices[3 * hitIndex + 2];
+
+                    vec3 v0 = vertices[i0];
+                    vec3 v1 = vertices[i1];
+                    vec3 v2 = vertices[i2];
+
+                    vec3 edge1 = v1 - v0;
+                    vec3 edge2 = v2 - v0;
+
+                    normal = normalize(cross(edge1, edge2));
+                    materialIndex = 1;
+
+                    // Flip normal if hit back face
+                    if (dot(normal, currentRd) > 0.0) {normal = -normal;}
+                }
+                Material material = materials[materialIndex];
+
+                // Emissive
+                accumulatedLight += material.color.rgb * material.emission * throughput;
+
+                // Simple Schlik Fresnel approx
+                float fresnel = 0.04 + (1.0 - 0.04) * pow(1.0 - max(dot(normal, -currentRd), 0.0), 5.0);
+                bool isSpecular = random(sampleSeed) < mix(fresnel, 1.0, material.metallic);
+
+                if (isSpecular)
+                {
+                    vec3 reflectDir = reflect(currentRd, normal);
+                    
+                    currentRd = normalize(mix(reflectDir, cosHemisphere(normal, sampleSeed), material.roughness * material.roughness));
+                    throughput *= mix(vec3(1.0, 1.0, 1.0), material.color.rgb, material.metallic);
+                }
+                else
+                {
+                    currentRd = cosHemisphere(normal, sampleSeed);
+                    throughput *= material.color.rgb;
+                }
+
+                // Offset to prevent self intersection
+                currentRo = hitPos + normal * 0.001;
+
+                // Russian roulette
+                float p = max(throughput.r, max(throughput.g, throughput.b));
+                if (random(sampleSeed) > p) {break;}
+                throughput /= p;
+            }
+            else
+            {
+                float skyT = 0.5 * (currentRd.y + 1.0);
+                //vec3 skyColor = mix(vec3(1.0), vec3(0.5, 0.7, 1.0), 0.5 * (currentRd.y + 1.0));
+                vec3 skyColor = vec3(0.0, 0.0, 0.0);
+                accumulatedLight += throughput * skyColor;
+                break;
+            }
+        }
+
+        frameColor += accumulatedLight;
+    }
+    
+    // Average SPP
+    frameColor /= float(SAMPLES_PER_PIXEL);
+
+    // Temporal accumulation
+    vec3 prevColor = texture(u_historyTexture, pixelCoord / u_resolution).rgb;
+    prevColor = pow(prevColor, vec3(2.2));
+
+    float weight = 1.0 / float(u_frameCount);
+    vec3 finalLinear = mix(prevColor, frameColor, weight);
+
+    fragColor = vec4(pow(finalLinear, vec3(1.0 / 2.2)), 1.0);
 }
