@@ -33,6 +33,73 @@ bool g_framebufferResized = false;
 int g_newWidth = WIDTH;
 int g_newHeight = HEIGHT;
 
+void calculateCameraVectors(Camera* camera, float* forwardX, float* forwardZ, float* rightX, float* rightZ)
+{
+    float yawRads = radians(camera -> yaw);
+
+    *forwardX = cos(yawRads);
+    *forwardZ = sin(yawRads);
+
+    *rightX = cos(yawRads + radians(90.0f));
+    *rightZ = sin(yawRads + radians(90.0f));
+}
+
+bool processInput(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    {
+        glfwSetWindowShouldClose(window, true);
+    }
+
+    bool moved = false;
+    float cameraVelocity = g_cameraSpeed * g_deltaTime;
+
+    float forwardX, forwardZ, rightX, rightZ;
+    calculateCameraVectors(&g_camera, &forwardX, &forwardZ, &rightX, &rightZ);
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    {
+        g_camera.px += forwardX * cameraVelocity;
+        g_camera.pz += forwardZ * cameraVelocity;
+        moved = true;
+    }
+
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    {
+        g_camera.px -= forwardX * cameraVelocity;
+        g_camera.pz -= forwardZ * cameraVelocity;
+        moved = true;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    {
+        g_camera.px += rightX * cameraVelocity;
+        g_camera.pz += rightZ * cameraVelocity;
+        moved = true;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    {
+        g_camera.px -= rightX * cameraVelocity;
+        g_camera.pz -= rightZ * cameraVelocity;
+        moved = true;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+    {
+        g_camera.py += cameraVelocity;
+        moved = true;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+    {
+        g_camera.py -= cameraVelocity;
+        moved = true;
+    }
+
+    return moved;
+}
+
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
@@ -202,7 +269,7 @@ int main(int argc, char* argv[])
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "GLTrace", NULL, NULL);
     if (!window)
     {
-        printf(stderr, "GLFW window creation failed\n");
+        fprintf(stderr, "GLFW window creation failed\n");
         glfwTerminate();
         return 1;
     }
@@ -215,7 +282,7 @@ int main(int argc, char* argv[])
     glfwSetCursorPosCallback(window, mouseCallback);
 
     // Load GL functions
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress));
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         fprintf(stderr, "Failed to load GLAD\n");
         glfwTerminate;
@@ -247,13 +314,58 @@ int main(int argc, char* argv[])
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
-        float currentFrame = (float)floatGetTime();
+        float currentFrame = (float)glfwGetTime();
         g_deltaTime = currentFrame - g_lastFrame;
         g_lastFrame = currentFrame;
 
         if (g_framebufferResized)
         {
-            glDeleteTextures(1, &g_accum)
+            glDeleteTextures(1, &g_accumTexture);
+            glDeleteTextures(1, &g_outputTexture);
+            glDeleteFramebuffers(1, &g_fbo);
+
+            setupAccumulationBuffers(g_newWidth, g_newHeight);
+
+            g_frameCount = 0;
+            g_framebufferResized = false;
         }
+
+        bool cameraMoved = processInput(window);
+        if (cameraMoved) {g_frameCount = 0;}
+        g_frameCount++;
+
+        glUniform2f(glGetUniformLocation(program, "u_resolution"), (float)g_newWidth, (float)g_newHeight);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_accumTexture, 0);
+
+        glUniform1i(glGetUniformLocation(program, "u_frameCount"), g_frameCount);
+        glUniform1i(glGetUniformLocation(program, "u_historyTexture"), 0);
+        glUniform3f(glGetUniformLocation(program, "u_cameraPos"), g_camera.px, g_camera.py, g_camera.pz);
+        glUniform1f(glGetUniformLocation(program, "u_cameraYaw"), g_camera.yaw);
+        glUniform1f(glGetUniformLocation(program, "u_cameraPitch"), g_camera.pitch);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, g_outputTexture);
+
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        GLuint temp = g_accumTexture;
+        g_accumTexture = g_outputTexture;
+        g_outputTexture = temp;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, g_accumTexture);
+
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
     }
+
+    glfwTerminate();
+    return 0;
 }
