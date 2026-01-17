@@ -9,6 +9,7 @@
 #include "file_util.h"
 #include "shader_structs.h"
 #include "obj_loader.h"
+#include "bvh.h"
 
 #ifndef M_PI
 #define M_PI 3.1415
@@ -244,7 +245,7 @@ Material g_materials[] =
 
     {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 5.0f, 1.0f},
 
-    // Semi-Transparrent Blue 4
+    // Semi-transparent Blue 4
     {0.2f, 0.2f, 1.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.2f}, 
  
     // Matte white 5
@@ -253,20 +254,32 @@ Material g_materials[] =
 
 const int NUM_MATERIALS = sizeof(g_materials) / sizeof(Material);
 
-void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, GLuint indexSSBO)
+void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, GLuint indexSSBO, GLuint bvhSSBO)
 {
     // Mesh setup
     MeshData mesh;
     if (loadObj("models/monkey.obj", &mesh))
     {
+        // Build BVH
+        BVH bvh;
+        buildBVH(&bvh, &mesh);
+
+        // Upload vertices
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, vertexSSBO);
         glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GPUPackedVertex) * mesh.vertexCunt, mesh.vertices, GL_STATIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, vertexSSBO);
 
+        // Upload indices
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, indexSSBO);
         glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t) * mesh.indexCount, mesh.indices, GL_STATIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, indexSSBO);
 
+        // Upload BVH nodes
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, bvhSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(BVHNode) * bvh.nodeCount, bvh.nodes, GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, bvhSSBO);
+
+        free(bvh.nodes);
         freeMeshData(&mesh);
     }
 
@@ -274,11 +287,8 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
 
     Sphere scene[3];
 
-    //scene[0] = (Sphere){0.0f, 0.0f, 0.0f, 1.0f, 1};
     scene[0] = (Sphere){2.5f, 0.0f, 0.0f, 0.5f, 3};
     scene[1] = (Sphere){-2.5f, 0.0f, 0.0f, 0.5f, 2}; 
-    //scene[3] = (Sphere){0.0f, 0.0f, -3.0f, 1.0f, 5}; 
-    //scene[4] = (Sphere){0.0f, 0.0f, 3.0f, 1.0f, 5}; 
     scene[2] = (Sphere){0.0f, -100.0f, 0.0f, 99.0f, 5};
 
     // Sphere data
@@ -339,13 +349,15 @@ int main(int argc, char* argv[])
     GLuint ssboMaterials;
     GLuint ssboVertices;
     GLuint ssboIndices;
+    GLuint ssboBVH;
 
     glGenBuffers(1, &ssboSpheres);
     glGenBuffers(1, &ssboMaterials);
     glGenBuffers(1, &ssboVertices);
     glGenBuffers(1, &ssboIndices);
+    glGenBuffers(1, &ssboBVH);
 
-    setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices);
+    setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH);
     
     GLuint program = createShaderProgram();
     glUseProgram(program);

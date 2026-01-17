@@ -27,12 +27,21 @@ struct Vertex
     float pad;
 };
 
+struct BVHNode
+{
+    vec3 aabbMin;
+    uint leftFirst;
+    vec3 aabbMax;
+    uint triCount;
+};
+
 const float M_PI = 3.1415926;
 
 layout(std430, binding = 0) buffer SceneData {Sphere spheres[];};
 layout(std430, binding = 1) buffer MaterialData {Material materials[];};
 layout(std430, binding = 2) buffer VertexData {Vertex vertices[];};
 layout(std430, binding = 3) buffer IndexData {uint indices[];};
+layout(std430, binding = 4) buffer BVHData {BVHNode bvhNodes[];};
 
 uniform vec2 u_resolution;
 uniform int u_frameCount;
@@ -70,6 +79,21 @@ vec3 cosHemisphere(vec3 n, inout uint seed)
     vec3 biTangent = cross(n, tangent);
 
     return tangent * localRay.x + biTangent * localRay.y + n * localRay.z;
+}
+
+float hitAABB(vec3 aabbMin, vec3 aabbMax, vec3 ro, vec3 invDir)
+{
+    vec3 t0s = (aabbMin - ro) * invDir;
+    vec3 t1s = (aabbMax - ro) * invDir;
+
+    vec3 tSmaller = min(t0s, t1s);
+    vec3 tBigger = max(t0s, t1s);
+
+    float tMin = max(tSmaller.x, max(tSmaller.y, tSmaller.z));
+    float tMax = min(tBigger.x, min(tBigger.y, tBigger.z));
+
+    if (tMin < tMax && tMax > 0.0) {return tMin;}
+    return 1e30;
 }
 
 float hitTriangleIndexed(int triIndex, vec3 ro, vec3 rd)
@@ -140,16 +164,57 @@ void findClosestHit(vec3 ro, vec3 rd, out float minT, out int hitIndex, out int 
         }
     }
 
-    // Check for triangle
-    int triCount = indices.length() / 3;
-    for(int i = 0; i < triCount; i++)
+    // Triangle
+
+    vec3 invDir = 1.0 / rd;
+
+    int stack[32];
+    int stackPtr = 0;   
+    stack[stackPtr++] = 0;
+
+    while (stackPtr > 0)
     {
-        float t = hitTriangleIndexed(i, ro, rd);
-        if (t > 0.001 && t < minT)
+        // Pop next node
+        int nodeIdx = stack[--stackPtr];
+        BVHNode node = bvhNodes[nodeIdx];
+
+        // Skip if further than current best hit
+        float distToBox = hitAABB(node.aabbMin, node.aabbMax, ro, invDir);
+        if (distToBox >= minT) {continue;}
+
+        if (node.triCount > 0)
         {
-            minT = t;
-            hitIndex = i;
-            hitType = 2;
+            for (uint i = 0; i < node.triCount; i++)
+            {
+                int triIdx = int(node.leftFirst + i);
+                float t = hitTriangleIndexed(triIdx, ro, rd);
+
+                if (t > 0.001 && t < minT)
+                {
+                    minT = t;
+                    hitIndex = triIdx;
+                    hitType = 2;
+                }
+            }
+        }
+        else // Internal node
+        {
+            int leftChild = int(node.leftFirst);
+            int rightChild = int(node.leftFirst + 1);
+
+            float distL = hitAABB(bvhNodes[leftChild].aabbMin, bvhNodes[leftChild].aabbMax, ro, invDir);
+            float distR = hitAABB(bvhNodes[rightChild].aabbMin, bvhNodes[rightChild].aabbMax, ro, invDir);
+
+            if (distL < distR)
+            {
+                if (distR < minT) {stack[stackPtr++] = rightChild;}
+                if (distL < minT) {stack[stackPtr++] = leftChild;}
+            }
+            else
+            {
+                if (distL < minT) {stack[stackPtr++] = leftChild;}
+                if (distR < minT) {stack[stackPtr++] = rightChild;}
+            }
         }
     }
 }
@@ -212,8 +277,8 @@ void main()
     float fov = 45.0;
     float tanFov = tan(radians(fov) * 0.5);
 
-    const int MAX_BOUNCES = 10;
-    const int SAMPLES_PER_PIXEL = 1;
+    const int MAX_BOUNCES = 5;
+    const int SAMPLES_PER_PIXEL = 4;
 
     // Recursive raytracing
     vec3 frameColor = vec3(0.0, 0.0, 0.0);
