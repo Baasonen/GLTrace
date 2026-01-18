@@ -1,7 +1,7 @@
 #version 460 core
 
-#define SKY true
-#define MAX_BOUNCES  7
+#define SKY false
+#define MAX_BOUNCES  5
 #define SAMPLES_PER_PIXEL 1
 
 // HEADER
@@ -178,9 +178,6 @@ void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay, out float mi
     }
 
     // Triangle
-    ivec3 raySign = ivec3(rd.x < 0, rd.y < 0, rd.z < 0);
-    
-
     int stack[32];
     int stackPtr = 0;   
     stack[stackPtr++] = 0;
@@ -275,8 +272,6 @@ void main()
     float aspect = u_resolution.x / u_resolution.y;
 
     vec3 ro = u_cameraPos;
-    float yawRads = radians(u_cameraYaw);
-    float pitchRads = radians(u_cameraPitch);
 
     float fov = 45.0;
     float tanFov = tan(radians(fov) * 0.5);
@@ -301,13 +296,14 @@ void main()
         vec3 throughput = vec3(1.0, 1.0, 1.0);
         vec3 currentRo = u_cameraPos;
         vec3 currentRd = rd;
-        vec3 invDir = 1.0 / rd;
 
         for (int bounce = 0; bounce < maxBounces; bounce++)
         {
             float minT;
             int hitIndex;
             int hitType;
+
+            vec3 invDir = 1.0 / currentRd;
             findClosestHit(currentRo, currentRd, invDir, (bounce == 0), minT, hitIndex, hitType);
 
             if (hitIndex != -1)

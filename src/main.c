@@ -281,7 +281,10 @@ Material g_materials[] =
     {0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 15.0f, 1.0f},
  
     // 5: Matte white
-    {1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f} 
+    {1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f}, 
+
+    // 6: Metallic
+    {1.0f, 1.0f, 1.0f, 0.0f, 0.2f, 1.0f, 0.0f, 1.0f} 
 };
 
 const int NUM_MATERIALS = sizeof(g_materials) / sizeof(Material);
@@ -317,11 +320,13 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
 
     // Sphere setup
 
-    Sphere scene[3];
+    Sphere scene[5];
 
     scene[0] = (Sphere){0.0f, 100.0f, 0.0f, 20.0f, 4};
-    scene[1] = (Sphere){140.0f, -20.0f, 0.0f, 15.0f, 2}; 
+    scene[1] = (Sphere){140.0f, 30.0f, 0.0f, 15.0f, 2}; 
     scene[2] = (Sphere){50.0f, 0.0f, -120.0f, 15.0f, 1};
+    scene[3] = (Sphere){0.0f, -10040.0f, 0.0f, 10000.0f, 5};
+    scene[4] = (Sphere){-40.0f, 0.0f, 300.0, 100.0f, 6};
 
     // Sphere data
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSSBO);
