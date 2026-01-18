@@ -126,5 +126,5 @@ void buildBVH(BVH* bvh, MeshData* mesh)
     updateNodeBounds(bvh, 0, mesh, mesh->indices);
     subdivide(bvh, 0, mesh);
 
-    printf("BVH built, nodes: %f\n", bvh->nodeCount);
+    printf("BVH built, nodes: %u\n", bvh->nodeCount);
 }

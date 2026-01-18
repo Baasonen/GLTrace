@@ -26,8 +26,8 @@ float g_lastY = HEIGHT / 2.0f;
 float g_mouseSensitivity = 0.1f;
 
 int g_frameCount = 0;
-Camera g_camera = {0.0f, 0.0f, 2.0f, -90.0f, 0.0f, 1.0f};
-float g_cameraSpeed = 2.0f;
+Camera g_camera = {0.0f, 0.0f, 200.0f, -90.0f, 0.0f, 1.0f};
+float g_cameraSpeed = 100.0f;
 
 float g_lastFrame = 0.0f;
 float g_deltaTime = 0.0f;
@@ -240,15 +240,16 @@ Material g_materials[] =
     // Mirror 1
     {1.0f, 1.0f, 1.0f, 0.0f, 0.2f, 1.0f, 0.0f, 1.0f}, 
 
-    // Emissive White 2
+    // 2: Emissive red
     {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 10.0f, 1.0f},
 
+    // 3: Emissive blue
     {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 5.0f, 1.0f},
 
-    // Semi-transparent Blue 4
-    {0.2f, 0.2f, 1.0f, 0.0f, 0.2f, 0.0f, 0.0f, 0.2f}, 
+    // 4: Stronger emissive blue
+    {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 15.0f, 1.0f},
  
-    // Matte white 5
+    // 5: Matte white
     {1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f} 
 };
 
@@ -258,7 +259,7 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
 {
     // Mesh setup
     MeshData mesh;
-    if (loadObj("models/monkey.obj", &mesh))
+    if (loadObj("models/dragon.obj", &mesh))
     {
         // Build BVH
         BVH bvh;
@@ -285,11 +286,11 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
 
     // Sphere setup
 
-    Sphere scene[3];
+    Sphere scene[2];
 
-    scene[0] = (Sphere){2.5f, 0.0f, 0.0f, 0.5f, 3};
-    scene[1] = (Sphere){-2.5f, 0.0f, 0.0f, 0.5f, 2}; 
-    scene[2] = (Sphere){0.0f, -100.0f, 0.0f, 99.0f, 5};
+    scene[0] = (Sphere){0.0f, 100.0f, 0.0f, 20.0f, 4};
+    scene[1] = (Sphere){120.0f, -20.0f, 0.0f, 15.0f, 2}; 
+    //scene[2] = (Sphere){0.0f, -100.0f, 0.0f, 99.0f, 5};
 
     // Sphere data
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSSBO);
