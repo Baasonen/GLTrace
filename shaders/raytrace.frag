@@ -14,7 +14,8 @@ struct Sphere
 
 struct Material
 {
-    vec4 color;
+    vec3 color;
+    float visibility;
     float roughness;
     float metallic;
     float emission;
@@ -146,7 +147,7 @@ float hitSphere(Sphere s, vec3 ro, vec3 rd)
 
 // SHADER
 
-void findClosestHit(vec3 ro, vec3 rd, out float minT, out int hitIndex, out int hitType)
+void findClosestHit(vec3 ro, vec3 rd, bool primaryRay, out float minT, out int hitIndex, out int hitType)
 {
     minT = 10000.0;
     hitIndex = -1;
@@ -158,6 +159,11 @@ void findClosestHit(vec3 ro, vec3 rd, out float minT, out int hitIndex, out int 
         float t = hitSphere(spheres[i], ro , rd);
         if (t > 0.001 && t < minT)
         {
+            bool invisible = materials[spheres[i].materialIndex].visibility > 0.5;
+
+            // Skip if material is invisible
+            if (primaryRay && invisible) {continue;}
+
             minT = t;
             hitIndex = i;
             hitType = 1;
@@ -165,7 +171,6 @@ void findClosestHit(vec3 ro, vec3 rd, out float minT, out int hitIndex, out int 
     }
 
     // Triangle
-
     vec3 invDir = 1.0 / rd;
     ivec3 raySign = ivec3(rd.x < 0, rd.y < 0, rd.z < 0);
     
@@ -305,7 +310,7 @@ void main()
             float minT;
             int hitIndex;
             int hitType;
-            findClosestHit(currentRo, currentRd, minT, hitIndex, hitType);
+            findClosestHit(currentRo, currentRd, (bounce == 0), minT, hitIndex, hitType);
 
             if (hitIndex != -1)
             {
@@ -340,7 +345,6 @@ void main()
                 }
                 Material material = materials[materialIndex];
 
-                // Emissive
                 accumulatedLight += material.color.rgb * material.emission * throughput;
 
                 // Simple Schlik Fresnel approx

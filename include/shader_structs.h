@@ -4,7 +4,7 @@
 typedef struct 
 {
     float cr, cg, cb;
-    float padding;
+    float visibility;
     float roughness;
     float metallic;
     float emission;

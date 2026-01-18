@@ -237,17 +237,17 @@ Material g_materials[] =
     // Matte Green 0
     {0.2f, 1.0f, 0.2f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f}, 
 
-    // Mirror 1
-    {1.0f, 1.0f, 1.0f, 0.0f, 0.2f, 1.0f, 0.0f, 1.0f}, 
+    // 1: Emissive green
+    {0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 9.0f, 1.0f},
 
     // 2: Emissive red
-    {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 10.0f, 1.0f},
+    {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 10.0f, 1.0f},
 
     // 3: Emissive blue
-    {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 5.0f, 1.0f},
+    {0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 5.0f, 1.0f},
 
     // 4: Stronger emissive blue
-    {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 15.0f, 1.0f},
+    {0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 15.0f, 1.0f},
  
     // 5: Matte white
     {1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f} 
@@ -286,11 +286,11 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
 
     // Sphere setup
 
-    Sphere scene[2];
+    Sphere scene[3];
 
     scene[0] = (Sphere){0.0f, 100.0f, 0.0f, 20.0f, 4};
-    scene[1] = (Sphere){120.0f, -20.0f, 0.0f, 15.0f, 2}; 
-    //scene[2] = (Sphere){0.0f, -100.0f, 0.0f, 99.0f, 5};
+    scene[1] = (Sphere){140.0f, -20.0f, 0.0f, 15.0f, 2}; 
+    scene[2] = (Sphere){50.0f, 0.0f, -120.0f, 15.0f, 1};
 
     // Sphere data
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSSBO);
