@@ -2,7 +2,7 @@
 
 #define SKY true
 #define MAX_BOUNCES  7
-#define SAMPLES_PER_PIXEL 4
+#define SAMPLES_PER_PIXEL 1
 
 // HEADER
 out vec4 fragColor;
@@ -56,6 +56,10 @@ uniform float u_cameraYaw;
 uniform float u_cameraPitch;
 uniform int u_isDisplayPass;
 
+uniform vec3 u_camForward;
+uniform vec3 u_camRight;
+uniform vec3 u_camUp;
+
 uint pcgHash(inout uint state)
 {
     state = state * 747796405u + 2891336453u;
@@ -91,14 +95,13 @@ float hitAABB(vec3 aabbMin, vec3 aabbMax, vec3 ro, vec3 invDir)
     vec3 t0s = (aabbMin - ro) * invDir;
     vec3 t1s = (aabbMax - ro) * invDir;
 
-    vec3 tSmaller = min(t0s, t1s);
-    vec3 tBigger = max(t0s, t1s);
+    vec3 tMin = min(t0s, t1s);
+    vec3 tMax = max(t0s, t1s);
 
-    float tMin = max(tSmaller.x, max(tSmaller.y, tSmaller.z));
-    float tMax = min(tBigger.x, min(tBigger.y, tBigger.z));
+    float tNear = max(tMin.x, max(tMin.y, tMin.z));
+    float tFar = min(tMax.x, min(tMax.y, tMax.z));
 
-    if (tMin < tMax && tMax > 0.0) {return tMin;}
-    return 1e30;
+    return (tFar >= tNear && tFar > 0.0) ? tNear : 1e30;
 }
 
 float hitTriangleIndexed(int triIndex, vec3 ro, vec3 rd)
@@ -151,7 +154,7 @@ float hitSphere(Sphere s, vec3 ro, vec3 rd)
 
 // SHADER
 
-void findClosestHit(vec3 ro, vec3 rd, bool primaryRay, out float minT, out int hitIndex, out int hitType)
+void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay, out float minT, out int hitIndex, out int hitType)
 {
     minT = 10000.0;
     hitIndex = -1;
@@ -175,7 +178,6 @@ void findClosestHit(vec3 ro, vec3 rd, bool primaryRay, out float minT, out int h
     }
 
     // Triangle
-    vec3 invDir = 1.0 / rd;
     ivec3 raySign = ivec3(rd.x < 0, rd.y < 0, rd.z < 0);
     
 
@@ -276,15 +278,6 @@ void main()
     float yawRads = radians(u_cameraYaw);
     float pitchRads = radians(u_cameraPitch);
 
-    vec3 forward;
-    forward.x = cos(yawRads) * cos(pitchRads);
-    forward.y = sin(pitchRads);
-    forward.z = sin(yawRads) * cos(pitchRads);
-
-    vec3 worldUp = vec3(0.0, 1.0, 0.0);
-    vec3 right = normalize(cross(forward, worldUp));
-    vec3 up = normalize(cross(right, forward));
-
     float fov = 45.0;
     float tanFov = tan(radians(fov) * 0.5);
 
@@ -302,19 +295,20 @@ void main()
         vec2 uv = (pixelCoord + jitter) / u_resolution * 2.0 - 1.0;
         uv.x *= aspect;
 
-        vec3 rd = normalize(forward + uv.x * tanFov * right + uv.y * tanFov * up);
+        vec3 rd = normalize(u_camForward + uv.x * tanFov * u_camRight + uv.y * tanFov * u_camUp);
 
         vec3 accumulatedLight = vec3(0.0, 0.0, 0.0);
         vec3 throughput = vec3(1.0, 1.0, 1.0);
         vec3 currentRo = u_cameraPos;
         vec3 currentRd = rd;
+        vec3 invDir = 1.0 / rd;
 
         for (int bounce = 0; bounce < maxBounces; bounce++)
         {
             float minT;
             int hitIndex;
             int hitType;
-            findClosestHit(currentRo, currentRd, (bounce == 0), minT, hitIndex, hitType);
+            findClosestHit(currentRo, currentRd, invDir, (bounce == 0), minT, hitIndex, hitType);
 
             if (hitIndex != -1)
             {

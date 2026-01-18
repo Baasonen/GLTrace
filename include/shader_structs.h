@@ -24,4 +24,9 @@ typedef struct
     unsigned int x, y, z, pad;
 } Index4;
 
+typedef struct 
+{
+    float x, y, z, a;
+} Vec4;
+
 #endif

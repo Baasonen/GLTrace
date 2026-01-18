@@ -21,6 +21,34 @@
 
 float radians(float deg) {return deg * (M_PI / 180.0f);}
 
+void normalize(Vec4* v)
+{
+    float sqrSum = (v->x) * (v->x) + (v->y) * (v->y) + (v->z) * (v->z);
+    float length = sqrtf(sqrSum);
+
+    v->x /= length;
+    v->y /= length;
+    v->z /= length;
+}
+
+Vec4 crossProduct(Vec4 a, Vec4 b)
+{
+    Vec4 result;
+
+    result.x = (a.y * b.z) - (a.z * b.y);
+    result.y = (a.z * b.x) - (a.x * b.z);
+    result.z = (a.x * b.y) - (a.y * b.x);
+
+    return result;
+}
+
+void vecScale(Vec4* a, float b)
+{
+    a->x *= b;
+    a->y *= b;
+    a->z *= b;
+}
+
 #define WIDTH 1280
 #define HEIGHT 720
 
@@ -66,41 +94,41 @@ bool processInput(GLFWwindow* window)
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
-        g_camera.px += forwardX * cameraVelocity;
-        g_camera.pz += forwardZ * cameraVelocity;
+        g_camera.x += forwardX * cameraVelocity;
+        g_camera.z += forwardZ * cameraVelocity;
         moved = true;
     }
 
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
     {
-        g_camera.px -= forwardX * cameraVelocity;
-        g_camera.pz -= forwardZ * cameraVelocity;
+        g_camera.x -= forwardX * cameraVelocity;
+        g_camera.z -= forwardZ * cameraVelocity;
         moved = true;
     }
 
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
     {
-        g_camera.px -= rightX * cameraVelocity;
-        g_camera.pz -= rightZ * cameraVelocity;
+        g_camera.x -= rightX * cameraVelocity;
+        g_camera.z -= rightZ * cameraVelocity;
         moved = true;
     }
 
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
-        g_camera.px += rightX * cameraVelocity;
-        g_camera.pz += rightZ * cameraVelocity;
+        g_camera.x += rightX * cameraVelocity;
+        g_camera.z += rightZ * cameraVelocity;
         moved = true;
     }
 
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
     {
-        g_camera.py += cameraVelocity;
+        g_camera.y += cameraVelocity;
         moved = true;
     }
 
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
     {
-        g_camera.py -= cameraVelocity;
+        g_camera.y -= cameraVelocity;
         moved = true;
     }
 
@@ -241,7 +269,7 @@ Material g_materials[] =
     {0.7f, 0.06f, 0.07f, 0.0f, 0.85f, 0.05f, 0.0f, 1.0f}, 
 
     // 1: Emissive green
-    {0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 13.0f, 1.0f},
+    {0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 10.0f, 1.0f},
 
     // 2: Emissive red
     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 10.0f, 1.0f},
@@ -270,7 +298,7 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
 
         // Upload vertices
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, vertexSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GPUPackedVertex) * mesh.vertexCunt, mesh.vertices, GL_STATIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GPUPackedVertex) * mesh.vertexCount, mesh.vertices, GL_STATIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, vertexSSBO);
 
         // Upload indices
@@ -292,7 +320,7 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
     Sphere scene[3];
 
     scene[0] = (Sphere){0.0f, 100.0f, 0.0f, 20.0f, 4};
-    scene[1] = (Sphere){140.0f, -20.0f, 200.0f, 15.0f, 2}; 
+    scene[1] = (Sphere){140.0f, -20.0f, 0.0f, 15.0f, 2}; 
     scene[2] = (Sphere){50.0f, 0.0f, -120.0f, 15.0f, 1};
 
     // Sphere data
@@ -355,7 +383,7 @@ int main(int argc, char* argv[])
     }
 
     // Vsync
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 
     // Buffer setup
     GLuint vao;
@@ -404,6 +432,29 @@ int main(int argc, char* argv[])
         if (cameraMoved) {g_frameCount = 0;}
         g_frameCount++;
 
+        Vec4 forward = {0.0f, 0.0f, 0.0f, 0.0f};
+
+        forward.x = cos(radians(g_camera.yaw)) * cos(radians(g_camera.pitch));
+        forward.y = sin(radians(g_camera.pitch));
+        forward.z = sin(radians(g_camera.yaw)) * cos(radians(g_camera.pitch));
+        normalize(&forward);
+
+        Vec4 up = {0.0f, 1.0f, 0.0f, 0.0f};
+        Vec4 right = crossProduct(forward, up);
+        normalize(&right);
+
+        Vec4 trueUp = crossProduct(right, forward);
+        normalize(&trueUp);
+
+        //float fovScale = tan(radians(45.0f) * 0.5f);
+        //
+        //vecScale(&right, fovScale);
+        //vecScale(&trueUp, fovScale);
+
+        glUniform3f(glGetUniformLocation(program, "u_camForward"), forward.x, forward.y, forward.z);
+        glUniform3f(glGetUniformLocation(program, "u_camRight"), right.x, right.y, right.z);
+        glUniform3f(glGetUniformLocation(program, "u_camUp"), trueUp.x, trueUp.y, trueUp.z);
+
         glUniform2f(glGetUniformLocation(program, "u_resolution"), (float)g_newWidth, (float)g_newHeight);
 
         glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
@@ -411,7 +462,7 @@ int main(int argc, char* argv[])
 
         glUniform1i(glGetUniformLocation(program, "u_frameCount"), g_frameCount);
         glUniform1i(glGetUniformLocation(program, "u_historyTexture"), 0);
-        glUniform3f(glGetUniformLocation(program, "u_cameraPos"), g_camera.px, g_camera.py, g_camera.pz);
+        glUniform3f(glGetUniformLocation(program, "u_cameraPos"), g_camera.x, g_camera.y, g_camera.z);
         glUniform1f(glGetUniformLocation(program, "u_cameraYaw"), g_camera.yaw);
         glUniform1f(glGetUniformLocation(program, "u_cameraPitch"), g_camera.pitch);
 

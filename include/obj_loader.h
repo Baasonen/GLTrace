@@ -15,7 +15,7 @@ typedef struct
     GPUPackedVertex* vertices;
     uint32_t* indices;
 
-    uint32_t vertexCunt;
+    uint32_t vertexCount;
     uint32_t indexCount;
     uint32_t triangleCount;
 

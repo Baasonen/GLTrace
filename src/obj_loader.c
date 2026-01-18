@@ -12,7 +12,7 @@ void freeMeshData(MeshData* mesh)
 
     mesh->vertices = NULL;
     mesh->indices = NULL;
-    mesh->vertexCunt = 0;
+    mesh->vertexCount = 0;
     mesh->indexCount = 0;
 }
 
@@ -65,12 +65,12 @@ int loadObj(const char* filename, MeshData* mesh)
         }
     }
 
-    mesh->vertexCunt = vCount;
+    mesh->vertexCount = vCount;
     mesh->triangleCount = tCount;
     mesh->indexCount = tCount * 3;
 
     // Allocate memory
-    mesh->vertices = (GPUPackedVertex*)malloc(sizeof(GPUPackedVertex) * mesh->vertexCunt);
+    mesh->vertices = (GPUPackedVertex*)malloc(sizeof(GPUPackedVertex) * mesh->vertexCount);
     mesh->indices = (uint32_t*)malloc(sizeof(uint32_t) * mesh->indexCount);
 
     if (!mesh->vertices || !mesh->indices)
@@ -147,6 +147,6 @@ int loadObj(const char* filename, MeshData* mesh)
     }
 
     fclose(file);
-    printf("\nLoaded OBJ: %d vertices, %d triangles\n\n", mesh->vertexCunt, mesh->triangleCount);
+    printf("\nLoaded OBJ: %d vertices, %d triangles\n\n", mesh->vertexCount, mesh->triangleCount);
     return 1;
 }
