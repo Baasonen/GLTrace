@@ -374,19 +374,24 @@ void main()
             }
             else
             {
+                bool sky = false;
+                vec3 skyColor = vec3(0.0, 0.0, 0.0);
 
-                float t = clamp(currentRd.y, -1.0, 1.0);
+                if (sky)
+                {
+                    float t = clamp(currentRd.y, -1.0, 1.0);
 
-                vec3 top    = vec3(0.5, 0.7, 1.0);
-                vec3 middle = vec3(0.7, 0.8, 1.0);
-                vec3 bottom = vec3(0.1, 0.1, 0.2);
+                    vec3 top    = vec3(0.5, 0.7, 1.0);
+                    vec3 middle = vec3(0.7, 0.8, 1.0);
+                    vec3 bottom = vec3(0.1, 0.1, 0.2);
 
-                vec3 skyColor = mix
-                (
-                    mix(middle, top, smoothstep(0.0, 1.0, t)),
-                    bottom,
-                    smoothstep(0.0, 1.0, -t)
-                );
+                    skyColor = mix
+                    (
+                        mix(middle, top, smoothstep(0.0, 1.0, t)),
+                        bottom,
+                        smoothstep(0.0, 1.0, -t)
+                    );
+                }
 
                 //vec3 skyColor = mix(vec3(1.0), vec3(0.5, 0.7, 1.0), 0.5 * (currentRd.y + 1.0));
                 //vec3 skyColor = vec3(0.0, 0.0, 0.0);

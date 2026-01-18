@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 #include "camera.h"
 #include "file_util.h"
@@ -257,11 +258,11 @@ Material g_materials[] =
 
 const int NUM_MATERIALS = sizeof(g_materials) / sizeof(Material);
 
-void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, GLuint indexSSBO, GLuint bvhSSBO)
+void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, GLuint indexSSBO, GLuint bvhSSBO, const char* modelPath)
 {
     // Mesh setup
     MeshData mesh;
-    if (loadObj("models/alfa147.obj", &mesh))
+    if (loadObj(modelPath, &mesh))
     {
         // Build BVH
         BVH bvh;
@@ -306,6 +307,19 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
 
 int main(int argc, char* argv[])
 {
+    char modelPath[512];
+
+    if (argc > 1)
+    {
+        snprintf(modelPath, sizeof(modelPath), "models/%s", argv[1]);
+    }
+    else
+    {
+        strncpy(modelPath, "models/alfa147.obj", sizeof(modelPath));
+    }
+
+    printf("GLTrace, loading: %s\n", modelPath);
+
     if (!glfwInit())
     {
         fprintf(stderr, "GLFW init failed\n");
@@ -360,7 +374,7 @@ int main(int argc, char* argv[])
     glGenBuffers(1, &ssboIndices);
     glGenBuffers(1, &ssboBVH);
 
-    setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH);
+    setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH, modelPath);
     
     GLuint program = createShaderProgram();
     glUseProgram(program);
