@@ -238,7 +238,7 @@ Material g_materials[] =
     {0.2f, 1.0f, 0.2f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f}, 
 
     // 1: Emissive green
-    {0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 9.0f, 1.0f},
+    {0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 13.0f, 1.0f},
 
     // 2: Emissive red
     {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 10.0f, 1.0f},
