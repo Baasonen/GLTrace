@@ -315,7 +315,7 @@ int main(int argc, char* argv[])
     }
     else
     {
-        strncpy(modelPath, "models/alfa147.obj", sizeof(modelPath));
+        strncpy(modelPath, "models/dragon.obj", sizeof(modelPath));
     }
 
     printf("GLTrace, loading: %s\n", modelPath);

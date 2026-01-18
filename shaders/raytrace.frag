@@ -1,5 +1,9 @@
 #version 460 core
 
+#define SKY true
+#define MAX_BOUNCES  7
+#define SAMPLES_PER_PIXEL 4
+
 // HEADER
 out vec4 fragColor;
 in vec2 v_uv;
@@ -284,13 +288,13 @@ void main()
     float fov = 45.0;
     float tanFov = tan(radians(fov) * 0.5);
 
-    const int MAX_BOUNCES = 7;
-    const int SAMPLES_PER_PIXEL = 4;
+    const int maxBounces = MAX_BOUNCES;
+    const int samplesPerPixel = SAMPLES_PER_PIXEL;
 
     // Recursive raytracing
     vec3 frameColor = vec3(0.0, 0.0, 0.0);
 
-    for (int s = 0; s < SAMPLES_PER_PIXEL; s++)
+    for (int s = 0; s < samplesPerPixel; s++)
     {
         uint sampleSeed = seed + uint(s) * 9781u;
 
@@ -305,7 +309,7 @@ void main()
         vec3 currentRo = u_cameraPos;
         vec3 currentRd = rd;
 
-        for (int bounce = 0; bounce < MAX_BOUNCES; bounce++)
+        for (int bounce = 0; bounce < maxBounces; bounce++)
         {
             float minT;
             int hitIndex;
@@ -338,7 +342,7 @@ void main()
                     vec3 edge2 = v2 - v0;
 
                     normal = normalize(cross(edge1, edge2));
-                    materialIndex = 0;
+                    materialIndex = 5;
 
                     // Flip normal if hit back face
                     if (dot(normal, currentRd) > 0.0) {normal = -normal;}
@@ -374,10 +378,9 @@ void main()
             }
             else
             {
-                bool sky = false;
                 vec3 skyColor = vec3(0.0, 0.0, 0.0);
 
-                if (sky)
+                if (SKY)
                 {
                     float t = clamp(currentRd.y, -1.0, 1.0);
 
@@ -404,7 +407,7 @@ void main()
     }
     
     // Average SPP
-    frameColor /= float(SAMPLES_PER_PIXEL);
+    frameColor /= float(samplesPerPixel);
 
     // Temporal accumulation
     vec3 prevColor = texture(u_historyTexture, pixelCoord / u_resolution).rgb;
