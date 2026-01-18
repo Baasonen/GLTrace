@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Henri Paasonen - GPLv2
+// See LICENSE for details
+
 #include <glad/glad.h>
 #include <glfw3.h>
 #include <stdio.h>
@@ -233,9 +236,8 @@ void setupAccumulationBuffers(int width, int height)
 
 Material g_materials[] =
 {
-    // Matte white
     // Matte Green 0
-    {0.2f, 1.0f, 0.2f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f}, 
+    {0.7f, 0.06f, 0.07f, 0.0f, 0.85f, 0.05f, 0.0f, 1.0f}, 
 
     // 1: Emissive green
     {0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 13.0f, 1.0f},
@@ -259,7 +261,7 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
 {
     // Mesh setup
     MeshData mesh;
-    if (loadObj("models/dragon.obj", &mesh))
+    if (loadObj("models/alfa147.obj", &mesh))
     {
         // Build BVH
         BVH bvh;
@@ -289,7 +291,7 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
     Sphere scene[3];
 
     scene[0] = (Sphere){0.0f, 100.0f, 0.0f, 20.0f, 4};
-    scene[1] = (Sphere){140.0f, -20.0f, 0.0f, 15.0f, 2}; 
+    scene[1] = (Sphere){140.0f, -20.0f, 200.0f, 15.0f, 2}; 
     scene[2] = (Sphere){50.0f, 0.0f, -120.0f, 15.0f, 1};
 
     // Sphere data

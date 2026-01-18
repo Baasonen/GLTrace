@@ -175,7 +175,7 @@ void findClosestHit(vec3 ro, vec3 rd, bool primaryRay, out float minT, out int h
     ivec3 raySign = ivec3(rd.x < 0, rd.y < 0, rd.z < 0);
     
 
-    int stack[64];
+    int stack[32];
     int stackPtr = 0;   
     stack[stackPtr++] = 0;
 
@@ -284,7 +284,7 @@ void main()
     float fov = 45.0;
     float tanFov = tan(radians(fov) * 0.5);
 
-    const int MAX_BOUNCES = 5;
+    const int MAX_BOUNCES = 7;
     const int SAMPLES_PER_PIXEL = 4;
 
     // Recursive raytracing
@@ -338,7 +338,7 @@ void main()
                     vec3 edge2 = v2 - v0;
 
                     normal = normalize(cross(edge1, edge2));
-                    materialIndex = 5;
+                    materialIndex = 0;
 
                     // Flip normal if hit back face
                     if (dot(normal, currentRd) > 0.0) {normal = -normal;}
@@ -374,9 +374,22 @@ void main()
             }
             else
             {
-                float skyT = 0.5 * (currentRd.y + 1.0);
+
+                float t = clamp(currentRd.y, -1.0, 1.0);
+
+                vec3 top    = vec3(0.5, 0.7, 1.0);
+                vec3 middle = vec3(0.7, 0.8, 1.0);
+                vec3 bottom = vec3(0.1, 0.1, 0.2);
+
+                vec3 skyColor = mix
+                (
+                    mix(middle, top, smoothstep(0.0, 1.0, t)),
+                    bottom,
+                    smoothstep(0.0, 1.0, -t)
+                );
+
                 //vec3 skyColor = mix(vec3(1.0), vec3(0.5, 0.7, 1.0), 0.5 * (currentRd.y + 1.0));
-                vec3 skyColor = vec3(0.0, 0.0, 0.0);
+                //vec3 skyColor = vec3(0.0, 0.0, 0.0);
                 accumulatedLight += throughput * skyColor;
                 break;
             }

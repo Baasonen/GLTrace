@@ -8,11 +8,20 @@
 
 #include "obj_loader.h"
 
+#define BINS 8
+
 typedef struct 
 {
     float min[3];
     float max[3];
 } AABB;
+
+typedef struct 
+{
+    float min[3];
+    float max[3];
+    int count;
+} Bin;
 
 typedef struct 
 {
@@ -28,11 +37,22 @@ typedef struct
     uint32_t nodeCount;
 } BVH;
 
+typedef struct 
+{
+    int maxDepth;
+    int leafCount;
+    int totalTrisInLeaves;
+} BVHStats;
+
 
 void updateNodeBounds(BVH* bvh, uint32_t nodeIdx, MeshData* mesh, const uint32_t* indices);
 
-void subdivide(BVH* bvh, uint32_t nodeIdx, MeshData* mesh);
+void subdivideSAH(BVH* bvh, uint32_t nodeIdx, MeshData* mesh);
 
 void buildBVH(BVH* bvh, MeshData* mesh);
+
+void analyzeBVH(BVH* bvh);
+
+void getStatsRecursive(BVH* bvh, uint32_t nodeIdx, int currentDepth, BVHStats* stats);
 
 #endif
