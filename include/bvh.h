@@ -8,7 +8,7 @@
 
 #include "obj_loader.h"
 
-#define BINS 8
+#define BINS 32
 
 typedef struct 
 {

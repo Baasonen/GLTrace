@@ -19,6 +19,12 @@
 #define M_PI 3.1415
 #endif
 
+#ifdef _WIN32
+__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+#endif
+
+
 float radians(float deg) {return deg * (M_PI / 180.0f);}
 
 void normalize(Vec4* v)
@@ -60,6 +66,7 @@ float g_mouseSensitivity = 0.1f;
 int g_frameCount = 0;
 Camera g_camera = {0.0f, 0.0f, 200.0f, -90.0f, 0.0f, 1.0f};
 float g_cameraSpeed = 100.0f;
+bool cameraLock = false;
 
 float g_lastFrame = 0.0f;
 float g_deltaTime = 0.0f;
@@ -91,6 +98,10 @@ bool processInput(GLFWwindow* window)
 
     float forwardX, forwardZ, rightX, rightZ;
     calculateCameraVectors(&g_camera, &forwardX, &forwardZ, &rightX, &rightZ);
+
+    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {cameraLock = !cameraLock;}
+    
+    if (cameraLock) {return moved;}
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
@@ -284,7 +295,7 @@ Material g_materials[] =
     {1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f}, 
 
     // 6: Metallic
-    {1.0f, 1.0f, 1.0f, 0.0f, 0.2f, 1.0f, 0.0f, 1.0f} 
+    {1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f} 
 };
 
 const int NUM_MATERIALS = sizeof(g_materials) / sizeof(Material);

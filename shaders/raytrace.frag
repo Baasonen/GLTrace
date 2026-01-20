@@ -178,7 +178,7 @@ void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay, out float mi
     }
 
     // Triangle
-    int stack[32];
+    int stack[25];
     int stackPtr = 0;   
     stack[stackPtr++] = 0;
 
