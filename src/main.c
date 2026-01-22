@@ -14,6 +14,7 @@
 #include "shader_structs.h"
 #include "obj_loader.h"
 #include "bvh.h"
+#include "matrix.h"
 
 #ifndef M_PI
 #define M_PI 3.1415
@@ -26,34 +27,6 @@ __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 
 
 float radians(float deg) {return deg * (M_PI / 180.0f);}
-
-void normalize(Vec4* v)
-{
-    float sqrSum = (v->x) * (v->x) + (v->y) * (v->y) + (v->z) * (v->z);
-    float length = sqrtf(sqrSum);
-
-    v->x /= length;
-    v->y /= length;
-    v->z /= length;
-}
-
-Vec4 crossProduct(Vec4 a, Vec4 b)
-{
-    Vec4 result;
-
-    result.x = (a.y * b.z) - (a.z * b.y);
-    result.y = (a.z * b.x) - (a.x * b.z);
-    result.z = (a.x * b.y) - (a.y * b.x);
-
-    return result;
-}
-
-void vecScale(Vec4* a, float b)
-{
-    a->x *= b;
-    a->y *= b;
-    a->z *= b;
-}
 
 #define WIDTH 1280
 #define HEIGHT 720
@@ -300,6 +273,50 @@ Material g_materials[] =
 
 const int NUM_MATERIALS = sizeof(g_materials) / sizeof(Material);
 
+int addMeshSource(SceneDescription* scene, const char* modelPath)
+{
+    int sourceIndex = scene->numberOfSources;
+
+    MeshData mesh;
+    
+    if (loadObj(modelPath, &mesh))
+    {
+        scene->meshSources[sourceIndex] = mesh;
+        scene->numberOfSources++;
+        return sourceIndex;
+    }
+    else
+    {
+        fprintf(stderr, "Failed to load mesh %s\n", modelPath);
+    }
+
+    return 1;
+}
+
+void addMeshInstance(SceneDescription* scene, int meshIndex, Vec4 pos, Vec4 scale, Vec4 rotation, int materialIndex)
+{
+    if (scene->numberOfInstances > meshIndex)
+    {
+        MeshInstance mesh;
+        mesh.materialIndex = materialIndex;
+        mesh.meshSourceIndex = meshIndex;
+        mesh.pos = pos;
+        mesh.scale = scale;
+        mesh.rotation = rotation;
+
+        scene->numberOfInstances++;
+    }
+    else
+    {
+        fprintf(stderr, "Invalid meshInstance index %i\n", meshIndex);
+    }
+}
+
+MeshData buildSceneMesh(SceneDescription* scene)
+{
+
+}
+
 void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, GLuint indexSSBO, GLuint bvhSSBO, const char* modelPath)
 {
     // Mesh setup
@@ -411,12 +428,14 @@ int main(int argc, char* argv[])
     GLuint ssboVertices;
     GLuint ssboIndices;
     GLuint ssboBVH;
+    GLuint ssboMeshData;
 
     glGenBuffers(1, &ssboSpheres);
     glGenBuffers(1, &ssboMaterials);
     glGenBuffers(1, &ssboVertices);
     glGenBuffers(1, &ssboIndices);
     glGenBuffers(1, &ssboBVH);
+    glGenBuffers(1, &ssboMeshData);
 
     setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH, modelPath);
     

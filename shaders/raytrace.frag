@@ -40,6 +40,14 @@ struct BVHNode
     uint triCount;
 };
 
+struct MeshData
+{
+    uint meshID;
+    uint vertexLength;
+    uint indexLength;
+    uint material;
+};
+
 const float M_PI = 3.1415926;
 
 layout(std430, binding = 0) buffer SceneData {Sphere spheres[];};
@@ -47,6 +55,7 @@ layout(std430, binding = 1) buffer MaterialData {Material materials[];};
 layout(std430, binding = 2) buffer VertexData {Vertex vertices[];};
 layout(std430, binding = 3) buffer IndexData {uint indices[];};
 layout(std430, binding = 4) buffer BVHData {BVHNode bvhNodes[];};
+//layout(std430, binding = 5) buffer MeshData {MeshData meshed[];};
 
 uniform vec2 u_resolution;
 uniform int u_frameCount;
@@ -54,7 +63,6 @@ uniform sampler2D u_historyTexture;
 uniform vec3 u_cameraPos;
 uniform float u_cameraYaw;
 uniform float u_cameraPitch;
-uniform int u_isDisplayPass;
 
 uniform vec3 u_camForward;
 uniform vec3 u_camRight;
@@ -92,6 +100,7 @@ vec3 cosHemisphere(vec3 n, inout uint seed)
 
 float hitAABB(vec3 aabbMin, vec3 aabbMax, vec3 ro, vec3 invDir)
 {
+    
     vec3 t0s = (aabbMin - ro) * invDir;
     vec3 t1s = (aabbMax - ro) * invDir;
 
@@ -135,8 +144,7 @@ float hitTriangleIndexed(int triIndex, vec3 ro, vec3 rd)
 
     float t = f * dot(edge2, q);
 
-    if (t > 0.001) {return t;}
-    return -1.0;
+    return (t > 0.001) ? t : -1.0;
 }
 
 float hitSphere(Sphere s, vec3 ro, vec3 rd)
@@ -146,10 +154,12 @@ float hitSphere(Sphere s, vec3 ro, vec3 rd)
     float c = dot(oc, oc) - s.radius * s.radius;
     float h = b * b - c; // Simplified discriminant
 
-    if (h < 0.0) {return -1.0;}
+    //if (h < 0.0) {return -1.0;}
 
     // We want the closest hit
-    return -b - sqrt(h);
+    //return -b - sqrt(h);
+
+    return (h < 0.0) ? -1.0 : (-b - sqrt(h));
 }
 
 // SHADER
@@ -178,7 +188,7 @@ void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay, out float mi
     }
 
     // Triangle
-    int stack[25];
+    int stack[32];
     int stackPtr = 0;   
     stack[stackPtr++] = 0;
 
@@ -244,26 +254,20 @@ vec3 shade(vec3 hitPos, vec3 normal, vec3 rd, int materialIndex)
     vec3 diffuse = diff * diffuseColor;
 
     // Specular
-    vec3 specularColor = mix(vec3(0.04), material.color.rgb, material.metallic);
-    vec3 halfwayDir = normalize(lightDir + v);
-    float shininess = 1.0 / (material.roughness * material.roughness + 0.001);
-    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
-    vec3 specular = specularColor * spec;
+    //vec3 specularColor = mix(vec3(0.04), material.color.rgb, material.metallic);
+    //vec3 halfwayDir = normalize(lightDir + v);
+    //float shininess = 1.0 / (material.roughness * material.roughness + 0.001);
+    //float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
+    //vec3 specular = specularColor * spec;
 
     // Ambient 
     vec3 ambient = 0.1 * material.color.rgb;
 
-    return emissive + ambient + diffuse + specular;
+    return emissive + ambient + diffuse;
 }
 
 void main()
 {
-    if (u_isDisplayPass == 1)
-    {
-        fragColor = texture(u_historyTexture, v_uv);
-        return;
-    }
-
     vec2 pixelCoord = gl_FragCoord.xy;
 
     uint seed = uint(pixelCoord.x) + uint(pixelCoord.y) * uint(u_resolution) + uint(u_frameCount) * 7125413u;

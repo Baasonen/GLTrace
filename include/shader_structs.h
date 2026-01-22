@@ -1,6 +1,8 @@
 #ifndef SHADER_STRUCTS_H
 #define SHADER_STRUCTS_H
 
+#include "obj_loader.h"
+
 typedef struct 
 {
     float cr, cg, cb;
@@ -28,5 +30,22 @@ typedef struct
 {
     float x, y, z, a;
 } Vec4;
+
+typedef struct 
+{
+    Vec4 pos;
+    Vec4 scale;
+    Vec4 rotation;
+    int materialIndex;
+    int meshSourceIndex;
+} MeshInstance;
+
+typedef struct 
+{
+    MeshData* meshSources;
+    int numberOfSources;
+    MeshInstance* meshInstances;
+    int numberOfInstances;
+} SceneDescription;
 
 #endif
