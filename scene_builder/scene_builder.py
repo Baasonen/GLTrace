@@ -18,6 +18,43 @@ matte = add_material(
     1.0
 )
 
+emissiveR = add_material(
+    1.0, 0.0, 0.0,
+    1.0,
+    0.0,
+    0.0,
+    10.0,
+    1.0
+)
+
+
+emissiveG = add_material(
+    0.0, 1.0, 0.0,
+    1.0,
+    0.0,
+    0.0,
+    10.0,
+    1.0
+)
+
+emissiveB = add_material(
+    0.0, 0.0, 1.0,
+    1.0,
+    0.0,
+    0.0,
+    10.0,
+    1.0
+)
+
+matteW = add_material(
+    1.0, 1.0, 1.0,
+    0.0,
+    0.9,
+    0.0,
+    0.0,
+    1.0
+)
+
 dragon = add_source("dragon.obj")
 
 add_instance(
@@ -29,7 +66,7 @@ add_instance(
 )
 
 add_instance(
-    pos=(400, 0, 0),
+    pos=(220, 0, 0),
     scale=(1, 1, 1),
     rotation=(0, 45, 0),
     material_index=matte,

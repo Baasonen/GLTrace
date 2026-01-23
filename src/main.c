@@ -358,10 +358,10 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
 
     Sphere spheres[5];
 
-    spheres[0] = (Sphere){0.0f, 100.0f, 0.0f, 20.0f, 0};
-    spheres[1] = (Sphere){140.0f, 30.0f, 0.0f, 15.0f, 0}; 
-    spheres[2] = (Sphere){50.0f, 0.0f, -120.0f, 15.0f, 0};
-    spheres[3] = (Sphere){0.0f, -10040.0f, 0.0f, 10000.0f, 0};
+    spheres[0] = (Sphere){0.0f, 100.0f, 0.0f, 20.0f, 2};
+    spheres[1] = (Sphere){140.0f, 30.0f, 0.0f, 15.0f, 3}; 
+    spheres[2] = (Sphere){50.0f, 0.0f, -120.0f, 15.0f, 4};
+    spheres[3] = (Sphere){0.0f, -10040.0f, 0.0f, 10000.0f, 5};
     spheres[4] = (Sphere){-40.0f, 0.0f, 300.0, 100.0f, 0};
 
     // Sphere data
