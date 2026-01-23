@@ -46,6 +46,18 @@ void vecScale(Vec4* a, float b)
     a->z *= b;
 }
 
+Vec4 matrixMultiplyVec4(Mat4 m, Vec4 v)
+{
+    Vec4 result;
+
+    result.x = m.m[0][0] * v.x + m.m[0][1] * v.y + m.m[0][2] * v.z + m.m[0][3] * v.a;
+    result.y = m.m[1][0] * v.x + m.m[1][1] * v.y + m.m[1][2] * v.z + m.m[1][3] * v.a;
+    result.z = m.m[2][0] * v.x + m.m[2][1] * v.y + m.m[2][2] * v.z + m.m[2][3] * v.a;
+    result.a = m.m[3][0] * v.x + m.m[3][1] * v.y + m.m[3][2] * v.z + m.m[3][3] * v.a;
+
+    return result;
+}
+
 Mat4 createIdentity()
 {
     Mat4 m = {0};
@@ -57,13 +69,13 @@ Mat4 createIdentity()
     return m;
 }
 
-Mat4 translationMatrix(Vec4 rotation)
+Mat4 translationMatrix(Vec4 pos)
 {
     Mat4 m = createIdentity();
 
-    m.m[0][3] = rotation.x;
-    m.m[1][3] = rotation.y;
-    m.m[2][3] = rotation.z;
+    m.m[0][3] = pos.x;
+    m.m[1][3] = pos.y;
+    m.m[2][3] = pos.z;
     m.m[3][3] = 1;
 
     return m;
@@ -133,4 +145,16 @@ Mat4 rotationMatrix(Vec4 rotation)
     Mat4 rz = rotationZ(rotation.z);
 
     return mat4Multiply(rz, mat4Multiply(ry, rx));
+}
+
+Mat4 transformMatrix(Vec4 pos, Vec4 scale, Vec4 rotation)
+{
+    Mat4 t = translationMatrix(pos);
+    Mat4 s = scaleMatrix(scale);
+    Mat4 r = rotationMatrix(rotation);
+
+    Mat4 rs = mat4Multiply(r, s);
+    Mat4 trs = mat4Multiply(t, rs);
+
+    return trs;
 }

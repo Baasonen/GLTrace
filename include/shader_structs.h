@@ -33,6 +33,11 @@ typedef struct
 
 typedef struct 
 {
+    float m[4][4];
+} Mat4;
+
+typedef struct 
+{
     Vec4 pos;
     Vec4 scale;
     Vec4 rotation;

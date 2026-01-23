@@ -288,9 +288,8 @@ int addMeshSource(SceneDescription* scene, const char* modelPath)
     else
     {
         fprintf(stderr, "Failed to load mesh %s\n", modelPath);
+        return -1;
     }
-
-    return 1;
 }
 
 void addMeshInstance(SceneDescription* scene, int meshIndex, Vec4 pos, Vec4 scale, Vec4 rotation, int materialIndex)
@@ -314,7 +313,59 @@ void addMeshInstance(SceneDescription* scene, int meshIndex, Vec4 pos, Vec4 scal
 
 MeshData buildSceneMesh(SceneDescription* scene)
 {
+    MeshData combinedMesh = {0};
 
+    int totalVertices = 0;
+    int totalIndices = 0;
+
+    for (int i = 0; i < scene->numberOfInstances; i++)
+    {
+        int srcIndex = scene->meshInstances[i].meshSourceIndex;
+
+        if (srcIndex >= scene->numberOfSources) {continue;}
+
+        totalVertices += scene->meshSources[srcIndex].vertexCount;
+        totalIndices += scene->meshSources[srcIndex].indexCount;
+    }
+
+    combinedMesh.vertices = (GPUPackedVertex*)malloc(sizeof(GPUPackedVertex) * totalVertices);
+    combinedMesh.indices = (uint32_t*)malloc(sizeof(uint32_t) * totalIndices);
+    combinedMesh.triangleMaterials = (uint32_t*)malloc(sizeof(uint32_t) * (totalIndices / 3));
+
+    combinedMesh.vertexCount = totalVertices;
+    combinedMesh.indexCount = totalIndices;
+
+    int vOffset = 0;
+    int iOffset = 0;
+    int tOffset = 0;
+    
+    for (int i = 0; i < scene->numberOfInstances; i++)
+    {
+        MeshInstance* instance = &scene->meshInstances[i];
+        int srcIndex = instance->meshSourceIndex;
+
+        if (srcIndex >= scene->numberOfSources) {continue;}
+
+        MeshData* sourceMesh = &scene->meshSources[srcIndex];
+
+        Mat4 modelMatrix = transformMatrix(instance->pos, instance->scale; instance->rotation);
+
+        for (int v = 0; v < sourceMesh->vertexCount; v++)
+        {
+            Vec4 localPos;
+            localPos.x = sourceMesh->vertices[v].x;
+            localPos.y = sourceMesh->vertices[v].y;
+            localPos.z = sourceMesh->vertices[v].z;
+            localPos.a = 1.0f;
+
+            Vec4 worldPos = matrixMultiplyVec4(modelMatrix, localPos);
+
+            combinedMesh.vertices[vOffset + v].x = worldPos.x;
+            combinedMesh.vertices[vOffset + v].y = worldPos.y;
+            combinedMesh.vertices[vOffset + v].z = worldPos.z;
+        }
+    for (int idx = 0; idx)
+    }
 }
 
 void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, GLuint indexSSBO, GLuint bvhSSBO, const char* modelPath)

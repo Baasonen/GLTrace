@@ -22,6 +22,8 @@ typedef struct
     // Bounding box
     float minBounds[3];
     float maxBounds[3];
+
+    uint32_t* triangleMaterials;
 } MeshData;
 
 int loadObj(const char* filename, MeshData* mesh);

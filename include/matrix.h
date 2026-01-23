@@ -5,11 +5,6 @@
 
 #include "shader_structs.h"
 
-typedef struct 
-{
-    float m[4][4];
-} Mat4;
-
 void normalize(Vec4* v);
 Vec4 crossProduct(Vec4 a, Vec4 b);
 Mat4 mat4Multiply(Mat4 a, Mat4 b);
@@ -21,5 +16,7 @@ Mat4 rotationX(float angle);
 Mat4 rotationY(float angle);
 Mat4 roationZ(float angle);
 Mat4 rotationMatrix(Vec4 rotation);
+Mat4 transformMatrix(Vec4 position, Vec4 scale, Vec4 rotation);
+Vec4 matrixMultiplyVec4(Mat4 m, Vec4 v);
 
 #endif
