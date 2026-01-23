@@ -59,8 +59,12 @@ typedef struct
 {
     MeshData* meshSources;
     int numberOfSources;
+
     MeshInstance* meshInstances;
     int numberOfInstances;
+
+    Material* materials;
+    int materialCount;
 } SceneDescription;
 
 #endif

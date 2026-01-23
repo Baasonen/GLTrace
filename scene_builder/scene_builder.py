@@ -2,7 +2,7 @@ from scene_writer import *
 
 gold = add_material(
     1.0, 0.8, 0.6,
-    1.0,
+    0.0,
     0.2,
     1.0,
     0.0,
@@ -11,7 +11,7 @@ gold = add_material(
 
 matte = add_material(
     0.2, 0.2, 0.25,
-    1.0,
+    0.0,
     0.9,
     0.0,
     0.0,
@@ -29,7 +29,7 @@ add_instance(
 )
 
 add_instance(
-    pos=(2, 0, 0),
+    pos=(400, 0, 0),
     scale=(1, 1, 1),
     rotation=(0, 45, 0),
     material_index=matte,

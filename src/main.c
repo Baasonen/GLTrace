@@ -14,7 +14,7 @@
 #include "obj_loader.h"
 #include "bvh.h"
 #include "matrix.h"
-#include "materials.h"
+#include "sceneloader.h"
 
 #ifndef M_PI
 #define M_PI 3.1415
@@ -247,44 +247,6 @@ void setupAccumulationBuffers(int width, int height)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-int addMeshSource(SceneDescription* scene, const char* modelPath)
-{
-    int sourceIndex = scene->numberOfSources;
-
-    MeshData mesh;
-    
-    if (loadObj(modelPath, &mesh))
-    {
-        scene->meshSources[sourceIndex] = mesh;
-        scene->numberOfSources++;
-        return sourceIndex;
-    }
-    else
-    {
-        fprintf(stderr, "Failed to load mesh %s\n", modelPath);
-        return -1;
-    }
-}
-
-void addMeshInstance(SceneDescription* scene, int meshIndex, Vec4 pos, Vec4 scale, Vec4 rotation, int materialIndex)
-{
-    if (scene->numberOfInstances > meshIndex)
-    {
-        MeshInstance mesh;
-        mesh.materialIndex = materialIndex;
-        mesh.meshSourceIndex = meshIndex;
-        mesh.pos = pos;
-        mesh.scale = scale;
-        mesh.rotation = rotation;
-
-        scene->numberOfInstances++;
-    }
-    else
-    {
-        fprintf(stderr, "Invalid meshInstance index %i\n", meshIndex);
-    }
-}
-
 MeshData buildSceneMesh(SceneDescription* scene)
 {
     MeshData combinedMesh = {0};
@@ -354,6 +316,8 @@ MeshData buildSceneMesh(SceneDescription* scene)
         tOffset += triangleCount;
         }
 
+    combinedMesh.triangleCount = totalIndices / 3;
+
     return combinedMesh;
 }
 
@@ -377,31 +341,33 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(BVHNode) * bvh.nodeCount, bvh.nodes, GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, bvhSSBO);
 
+    // Material data for triangles
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, triangleMaterialSSBO);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t) * sceneMesh.triangleCount, sceneMesh.triangleMaterials, GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, triangleMaterialSSBO);
+
+    // Materials
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Material) * sceneDesc->materialCount, sceneDesc->materials, GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, materialSSBO);
 
     free(bvh.nodes);
     freeMeshData(&sceneMesh);
 
     // Sphere setup
 
-    Sphere scene[5];
+    Sphere spheres[5];
 
-    scene[0] = (Sphere){0.0f, 100.0f, 0.0f, 20.0f, 4};
-    scene[1] = (Sphere){140.0f, 30.0f, 0.0f, 15.0f, 2}; 
-    scene[2] = (Sphere){50.0f, 0.0f, -120.0f, 15.0f, 1};
-    scene[3] = (Sphere){0.0f, -10040.0f, 0.0f, 10000.0f, 5};
-    scene[4] = (Sphere){-40.0f, 0.0f, 300.0, 100.0f, 6};
+    spheres[0] = (Sphere){0.0f, 100.0f, 0.0f, 20.0f, 0};
+    spheres[1] = (Sphere){140.0f, 30.0f, 0.0f, 15.0f, 0}; 
+    spheres[2] = (Sphere){50.0f, 0.0f, -120.0f, 15.0f, 0};
+    spheres[3] = (Sphere){0.0f, -10040.0f, 0.0f, 10000.0f, 0};
+    spheres[4] = (Sphere){-40.0f, 0.0f, 300.0, 100.0f, 0};
 
     // Sphere data
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(scene), scene, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(spheres), spheres, GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, sphereSSBO);
-
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(g_materials), g_materials, GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, materialSSBO);
 }
 
 int main(int argc, char* argv[])
@@ -449,7 +415,7 @@ int main(int argc, char* argv[])
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         fprintf(stderr, "Failed to load GLAD\n");
-        glfwTerminate;
+        glfwTerminate();
         return 1;
     }
 
@@ -475,9 +441,15 @@ int main(int argc, char* argv[])
     glGenBuffers(1, &ssboBVH);
     glGenBuffers(1, &ssboTriangleMaterial);
 
-    SceneDescription scene1;
+    SceneDescription scene;
 
-    setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH, ssboTriangleMaterial, &scene1);
+    if (!loadScene("Scenes/test.scene", &scene))
+    {
+        fprintf(stderr, "Failed to load scene");
+        return 1;
+    }
+
+    setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH, ssboTriangleMaterial, &scene);
     
     GLuint program = createShaderProgram();
     glUseProgram(program);

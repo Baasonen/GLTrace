@@ -28,6 +28,7 @@ def add_source(model_filename):
         raise FileNotFoundError(f"Model not found: {full_path}")
 
     relative_path = os.path.relpath(full_path, PROJECT_ROOT)
+    relative_path = relative_path.replace("\\", "/")
 
     if relative_path not in sources:
         sources.append(relative_path)
