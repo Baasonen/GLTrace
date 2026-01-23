@@ -40,14 +40,6 @@ struct BVHNode
     uint triCount;
 };
 
-struct MeshData
-{
-    uint meshID;
-    uint vertexLength;
-    uint indexLength;
-    uint material;
-};
-
 const float M_PI = 3.1415926;
 
 layout(std430, binding = 0) buffer SceneData {Sphere spheres[];};
@@ -55,7 +47,7 @@ layout(std430, binding = 1) buffer MaterialData {Material materials[];};
 layout(std430, binding = 2) buffer VertexData {Vertex vertices[];};
 layout(std430, binding = 3) buffer IndexData {uint indices[];};
 layout(std430, binding = 4) buffer BVHData {BVHNode bvhNodes[];};
-//layout(std430, binding = 5) buffer MeshData {MeshData meshed[];};
+layout(std430, binding = 5) buffer TriangleMaterialData {uint triangleMaterials[];};
 
 uniform vec2 u_resolution;
 uniform int u_frameCount;
@@ -336,7 +328,8 @@ void main()
                     vec3 edge2 = v2 - v0;
 
                     normal = normalize(cross(edge1, edge2));
-                    materialIndex = 5;
+                    
+                    materialIndex = int(triangleMaterials[hitIndex]);
 
                     // Flip normal if hit back face
                     if (dot(normal, currentRd) > 0.0) {normal = -normal;}

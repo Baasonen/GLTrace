@@ -9,12 +9,12 @@
 #include <math.h>
 #include <string.h>
 
-#include "camera.h"
 #include "file_util.h"
 #include "shader_structs.h"
 #include "obj_loader.h"
 #include "bvh.h"
 #include "matrix.h"
+#include "materials.h"
 
 #ifndef M_PI
 #define M_PI 3.1415
@@ -247,32 +247,6 @@ void setupAccumulationBuffers(int width, int height)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-Material g_materials[] =
-{
-    // Matte Green 0
-    {0.7f, 0.06f, 0.07f, 0.0f, 0.85f, 0.05f, 0.0f, 1.0f}, 
-
-    // 1: Emissive green
-    {0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 10.0f, 1.0f},
-
-    // 2: Emissive red
-    {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 10.0f, 1.0f},
-
-    // 3: Emissive blue
-    {0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 5.0f, 1.0f},
-
-    // 4: Stronger emissive blue
-    {0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 15.0f, 1.0f},
- 
-    // 5: Matte white
-    {1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f}, 
-
-    // 6: Metallic
-    {1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f} 
-};
-
-const int NUM_MATERIALS = sizeof(g_materials) / sizeof(Material);
-
 int addMeshSource(SceneDescription* scene, const char* modelPath)
 {
     int sourceIndex = scene->numberOfSources;
@@ -348,7 +322,7 @@ MeshData buildSceneMesh(SceneDescription* scene)
 
         MeshData* sourceMesh = &scene->meshSources[srcIndex];
 
-        Mat4 modelMatrix = transformMatrix(instance->pos, instance->scale; instance->rotation);
+        Mat4 modelMatrix = transformMatrix(instance->pos, instance->scale, instance->rotation);
 
         for (int v = 0; v < sourceMesh->vertexCount; v++)
         {
@@ -364,38 +338,51 @@ MeshData buildSceneMesh(SceneDescription* scene)
             combinedMesh.vertices[vOffset + v].y = worldPos.y;
             combinedMesh.vertices[vOffset + v].z = worldPos.z;
         }
-    for (int idx = 0; idx)
-    }
+        for (int idx = 0; idx < sourceMesh->indexCount; idx++)
+        {
+            combinedMesh.indices[iOffset + idx] = sourceMesh->indices[idx] + vOffset;
+        }
+
+        int triangleCount = sourceMesh->indexCount / 3;
+        for (int t = 0; t < triangleCount; t++)
+        {
+            combinedMesh.triangleMaterials[tOffset + t] = instance->materialIndex;
+        }
+
+        vOffset += sourceMesh->vertexCount;
+        iOffset += sourceMesh->indexCount;
+        tOffset += triangleCount;
+        }
+
+    return combinedMesh;
 }
 
-void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, GLuint indexSSBO, GLuint bvhSSBO, const char* modelPath)
+void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, GLuint indexSSBO, GLuint bvhSSBO, GLuint triangleMaterialSSBO, SceneDescription* sceneDesc)
 {
-    // Mesh setup
-    MeshData mesh;
-    if (loadObj(modelPath, &mesh))
-    {
-        // Build BVH
-        BVH bvh;
-        buildBVH(&bvh, &mesh);
+    MeshData sceneMesh;
+    sceneMesh = buildSceneMesh(sceneDesc);
 
-        // Upload vertices
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, vertexSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GPUPackedVertex) * mesh.vertexCount, mesh.vertices, GL_STATIC_DRAW);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, vertexSSBO);
+    BVH bvh;
+    buildBVH(&bvh, &sceneMesh);
+    // Upload vertices
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, vertexSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GPUPackedVertex) * sceneMesh.vertexCount, sceneMesh.vertices, GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, vertexSSBO);
+    // Upload indices
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, indexSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t) * sceneMesh.indexCount, sceneMesh.indices, GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, indexSSBO);
+    // Upload BVH nodes
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, bvhSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(BVHNode) * bvh.nodeCount, bvh.nodes, GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, bvhSSBO);
 
-        // Upload indices
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, indexSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t) * mesh.indexCount, mesh.indices, GL_STATIC_DRAW);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, indexSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, triangleMaterialSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t) * sceneMesh.triangleCount, sceneMesh.triangleMaterials, GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, triangleMaterialSSBO);
 
-        // Upload BVH nodes
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, bvhSSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(BVHNode) * bvh.nodeCount, bvh.nodes, GL_STATIC_DRAW);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, bvhSSBO);
-
-        free(bvh.nodes);
-        freeMeshData(&mesh);
-    }
+    free(bvh.nodes);
+    freeMeshData(&sceneMesh);
 
     // Sphere setup
 
@@ -479,16 +466,18 @@ int main(int argc, char* argv[])
     GLuint ssboVertices;
     GLuint ssboIndices;
     GLuint ssboBVH;
-    GLuint ssboMeshData;
+    GLuint ssboTriangleMaterial;
 
     glGenBuffers(1, &ssboSpheres);
     glGenBuffers(1, &ssboMaterials);
     glGenBuffers(1, &ssboVertices);
     glGenBuffers(1, &ssboIndices);
     glGenBuffers(1, &ssboBVH);
-    glGenBuffers(1, &ssboMeshData);
+    glGenBuffers(1, &ssboTriangleMaterial);
 
-    setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH, modelPath);
+    SceneDescription scene1;
+
+    setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH, ssboTriangleMaterial, &scene1);
     
     GLuint program = createShaderProgram();
     glUseProgram(program);
@@ -531,11 +520,6 @@ int main(int argc, char* argv[])
 
         Vec4 trueUp = crossProduct(right, forward);
         normalize(&trueUp);
-
-        //float fovScale = tan(radians(45.0f) * 0.5f);
-        //
-        //vecScale(&right, fovScale);
-        //vecScale(&trueUp, fovScale);
 
         glUniform3f(glGetUniformLocation(program, "u_camForward"), forward.x, forward.y, forward.z);
         glUniform3f(glGetUniformLocation(program, "u_camRight"), right.x, right.y, right.z);

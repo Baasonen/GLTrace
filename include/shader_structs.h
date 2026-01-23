@@ -3,6 +3,31 @@
 
 #include "obj_loader.h"
 
+
+typedef struct 
+{
+    unsigned int x, y, z, pad;
+} Index4;
+
+typedef struct 
+{
+    float x, y, z, a;
+} Vec4;
+
+typedef struct 
+{
+    float m[4][4];
+} Mat4;
+
+
+typedef struct 
+{
+    float x, y, z;
+    float yaw, pitch;
+    float focalLength;
+    float padding[2];
+} Camera;
+
 typedef struct 
 {
     float cr, cg, cb;
@@ -20,21 +45,6 @@ typedef struct
     int materialIndex;
     float padding[3];
 } Sphere;
-
-typedef struct 
-{
-    unsigned int x, y, z, pad;
-} Index4;
-
-typedef struct 
-{
-    float x, y, z, a;
-} Vec4;
-
-typedef struct 
-{
-    float m[4][4];
-} Mat4;
 
 typedef struct 
 {
