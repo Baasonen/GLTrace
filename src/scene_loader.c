@@ -1,4 +1,4 @@
-#include "sceneloader.h"
+#include "scene_loader.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +24,7 @@ void freeScene(SceneDescription* scene)
 
     free(scene->materials);
     free(scene->meshInstances);
+    free(scene->spheres);
 
     zeroScene(scene);
 }
@@ -144,6 +145,39 @@ int loadScene(const char* scenePath, SceneDescription* scene)
         inst->pos.a = 1.0f;
         inst->scale.a = 1.0f;
         inst->rotation.a = 1.0f;
+    }
+
+    if (fscanf(file, "%d", &scene->sphereCount) != 1)
+    {
+        scene->sphereCount = 0;
+        fclose(file);
+        return 1;
+    }
+
+    if (scene->sphereCount > 0)
+    {
+        scene->spheres = calloc(scene->sphereCount, sizeof(Sphere));
+        if (!scene->spheres)
+        {
+            freeScene(scene);
+            fclose(file);
+            return 0;
+        }
+
+        for (int i = 0; i < scene->sphereCount; i++)
+        {
+            Sphere* s = &scene->spheres[i];
+            if (fscanf(file, "%f %f %f %f %d", &s->px, &s->py, &s->pz, &s->radius, &s->materialIndex) != 5)
+            {
+                fprintf(stderr, "Failed to read sphere %d\n", i);
+                freeScene(scene);
+                fclose(file);
+                return 0;
+            }
+            s->padding[0] = 1.0f;
+            s->padding[1] = 1.0f;
+            s->padding[2] = 1.0f;
+        }
     }
 
     fclose(file);

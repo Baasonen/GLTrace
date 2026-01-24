@@ -1,6 +1,6 @@
 #version 460 core
 
-#define SKY false
+#define SKY true
 #define MAX_BOUNCES  7
 #define SAMPLES_PER_PIXEL 1
 

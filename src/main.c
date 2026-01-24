@@ -14,7 +14,7 @@
 #include "obj_loader.h"
 #include "bvh.h"
 #include "matrix.h"
-#include "sceneloader.h"
+#include "scene_loader.h"
 
 #ifndef M_PI
 #define M_PI 3.1415
@@ -354,36 +354,37 @@ void setupSceneData(GLuint sphereSSBO, GLuint materialSSBO, GLuint vertexSSBO, G
     free(bvh.nodes);
     freeMeshData(&sceneMesh);
 
-    // Sphere setup
-
-    Sphere spheres[5];
-
-    spheres[0] = (Sphere){0.0f, 100.0f, 0.0f, 20.0f, 2};
-    spheres[1] = (Sphere){140.0f, 30.0f, 0.0f, 15.0f, 3}; 
-    spheres[2] = (Sphere){50.0f, 0.0f, -120.0f, 15.0f, 4};
-    spheres[3] = (Sphere){0.0f, -10040.0f, 0.0f, 10000.0f, 5};
-    spheres[4] = (Sphere){-40.0f, 0.0f, 300.0, 100.0f, 0};
-
     // Sphere data
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(spheres), spheres, GL_STATIC_DRAW);
+
+    if (sceneDesc->sphereCount > 0)
+    {
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Sphere) * sceneDesc->sphereCount, sceneDesc->spheres, GL_STATIC_DRAW);
+    }
+    else
+    {
+        // Allocate some memory to prevent GL errors if empty
+        Sphere placeholderSphere = {0};
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Sphere), &placeholderSphere, GL_STATIC_DRAW);
+    }
+
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, sphereSSBO);
 }
 
 int main(int argc, char* argv[])
 {
-    char modelPath[512];
+    char scenePath[512];
 
     if (argc > 1)
     {
-        snprintf(modelPath, sizeof(modelPath), "models/%s", argv[1]);
+        snprintf(scenePath, sizeof(scenePath), "scenes/%s", argv[1]);
     }
     else
     {
-        strncpy(modelPath, "models/dragon.obj", sizeof(modelPath));
+        strncpy(scenePath, "scenes/1.scene", sizeof(scenePath));
     }
 
-    printf("GLTrace, loading: %s\n", modelPath);
+    printf("\nGLTrace, loading: %s\n", scenePath);
 
     if (!glfwInit())
     {
@@ -443,9 +444,9 @@ int main(int argc, char* argv[])
 
     SceneDescription scene;
 
-    if (!loadScene("Scenes/test.scene", &scene))
+    if (!loadScene(scenePath, &scene))
     {
-        fprintf(stderr, "Failed to load scene");
+        fprintf(stderr, "Failed to load scene %s\n", scenePath);
         return 1;
     }
 

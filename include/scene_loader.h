@@ -1,5 +1,5 @@
-#ifndef SCENELOADER_H
-#define SCENELOADER_H
+#ifndef SCENE_LOADER_H
+#define SCENE_LOADER_H
 
 #include "shader_structs.h"
 

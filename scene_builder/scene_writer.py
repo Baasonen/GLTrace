@@ -10,6 +10,7 @@ SCENES_DIR = os.path.join(PROJECT_ROOT, "scenes")
 materials = []
 sources = []
 instances = []
+spheres = []
 
 def add_material(r, g, b, visibility, roughness, metallic, emission, opacity):
     if visibility > 0.5:
@@ -38,6 +39,9 @@ def add_source(model_filename):
 def add_instance(pos, scale, rotation, material_index, source_index):
     instances.append((pos, scale, rotation, material_index, source_index))
 
+def add_sphere(pos, radius, material_index):
+    spheres.append((pos, radius, material_index))
+
 def write_scene(scene_name):
     os.makedirs(SCENES_DIR, exist_ok=True)
     output_path = os.path.join(SCENES_DIR, scene_name)
@@ -64,4 +68,14 @@ def write_scene(scene_name):
                 f"{rot[0]} {rot[1]} {rot[2]}   "
                 f"{mat_idx} {src_idx}\n"
             )
+        f.write("\n")
+
+        f.write(f"{len(spheres)}\n")
+        for s in spheres:
+            pos, rad, mat_idx = s
+            f.write(
+                f"{pos[0]} {pos[1]} {pos[2]} "
+                f"{rad} {mat_idx}\n"
+            )
+
     print(f"Scene written to: {output_path}")

@@ -65,6 +65,9 @@ typedef struct
 
     Material* materials;
     int materialCount;
+
+    Sphere* spheres;
+    int sphereCount;
 } SceneDescription;
 
 #endif
