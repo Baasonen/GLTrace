@@ -48,7 +48,9 @@ int loadObj(const char* filename, MeshData* mesh)
 
             while (*p != '\0')
             {
+                // Skip space before word
                 while (*p == ' ' || *p == '\t') p++;
+
                 if (*p == '\0' || *p == '\n' || *p == '\r') break;
 
                 verticesInFace++;
@@ -118,14 +120,26 @@ int loadObj(const char* filename, MeshData* mesh)
             int count = 0;
 
             char* p = line + 1;
-            while (*p == ' ' || *p == '\t') p++;
-
             
-            while (count < 4 && sscanf(p, "%u", &v[count]) == 1)
+            while (count < 4)
             {
+                // 1. Skip leading whitespace
+                while (*p == ' ' || *p == '\t') {p++;}
+                if (*p == '\0' || *p == '\n' || *p == '\r') {break;}
+
+                char* endPtr;
+                v[count] = (unsigned int)strtoul(p, &endPtr, 10);
+
+                if (endPtr == p) 
+                {
+                    p++;
+                    continue; 
+                }
+
                 count++;
-                while (*p != '\0' && *p != ' ' && *p != '\t') p++;
-                while (*p == ' ' || *p == '\t') p++;
+                p = endPtr; 
+
+                while (*p != '\0' && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') {p++;}
             }
 
             if (count >= 3)
@@ -139,8 +153,8 @@ int loadObj(const char* filename, MeshData* mesh)
                 {
                     // Second triangle (if quad)
                     mesh->indices[iPtr++] = v[0] - 1;
-                    mesh->indices[iPtr++] = v[1] - 1;
                     mesh->indices[iPtr++] = v[2] - 1;
+                    mesh->indices[iPtr++] = v[3] - 1;
                 }
             }
         }
