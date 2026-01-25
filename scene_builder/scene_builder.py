@@ -29,7 +29,7 @@ matte = add_material(
 
 emissiveR = add_material(
     1.0, 0.0, 0.0,
-    1.0,
+    0.0,
     0.0,
     0.0,
     10.0,
@@ -39,7 +39,7 @@ emissiveR = add_material(
 
 emissiveG = add_material(
     0.0, 1.0, 0.0,
-    1.0,
+    0.0,
     0.0,
     0.0,
     10.0,
@@ -48,7 +48,7 @@ emissiveG = add_material(
 
 emissiveB = add_material(
     0.0, 0.0, 1.0,
-    1.0,
+    0.0,
     0.0,
     0.0,
     10.0,
@@ -57,7 +57,7 @@ emissiveB = add_material(
 
 emissiveSoftW = add_material(
     1.0, 1.0, 1.0,
-    1.0,
+    0.0,
     0.0,
     0.0,
     2.0,
@@ -73,70 +73,30 @@ matteW = add_material(
     1.0
 )
 
-dragon = add_source("dragon.obj")
-alfa = add_source("alfa147.obj")
-
-add_instance(
-    pos=(0, -40, -400),
-    scale=(2, 2, 2),
-    rotation=(0, 0, 0),
-    material_index=gold,
-    source_index=alfa
-)
+room = add_source("Room.obj")
 
 add_instance(
     pos=(0, 0, 0),
     scale=(1, 1, 1),
     rotation=(0, 0, 0),
-    material_index=gold,
-    source_index=dragon
-)
-
-add_instance(
-    pos=(220, 0, 0),
-    scale=(1, 1, 1),
-    rotation=(0, 45, 0),
-    material_index=matte,
-    source_index=dragon
-)
-
-add_instance(
-    pos=(-220, 0, 0),
-    scale=(0.5, 0.5, 0.5),
-    rotation=(0, 315, 0),
-    material_index=emissiveSoftW,
-    source_index=dragon
+    material_index=matteW,
+    source_index=room
 )
 
 add_sphere(
-    pos=(0.0, 100.0, 0.0),
-    radius=(20.0),
+    pos=(0, 0, 0),
+    radius=10,
     material_index=emissiveR
 )
-
 add_sphere(
-    pos=(140.0, 30.0, 0.0),
-    radius=(15.0),
+    pos=(60, 20, 0),
+    radius=10,
+    material_index=emissiveB
+)
+add_sphere(
+    pos=(-40, -20, 0),
+    radius=10,
     material_index=emissiveG
 )
 
-add_sphere(
-    pos=(50.0, 100.0, -120.0),
-    radius=(15.0),
-    material_index=emissiveB
-)
-
-add_sphere(
-    pos=(0.0, -10040.0, 0.0),
-    radius=(10000.0),
-    material_index=matteW
-)
-
-add_sphere(
-    pos=(-40., 0.0, 300.0),
-    radius=(100.0),
-    material_index=mirror
-)
-
-
-write_scene("1.scene")
+write_scene("room.scene")

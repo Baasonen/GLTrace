@@ -1,6 +1,6 @@
 #version 460 core
 
-#define SKY true
+#define SKY false
 #define MAX_BOUNCES  7
 #define SAMPLES_PER_PIXEL 1
 
@@ -102,7 +102,7 @@ float hitAABB(vec3 aabbMin, vec3 aabbMax, vec3 ro, vec3 invDir)
     float tNear = max(tMin.x, max(tMin.y, tMin.z));
     float tFar = min(tMax.x, min(tMax.y, tMax.z));
 
-    return (tFar >= tNear && tFar > 0.0) ? tNear : 1e30;
+    return (tFar >= tNear && tFar > 0.0) ? max(0.0, tNear) : 1e30;
 }
 
 float hitTriangleIndexed(int triIndex, vec3 ro, vec3 rd)
