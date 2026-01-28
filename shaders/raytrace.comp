@@ -1,6 +1,5 @@
 #version 460 core
 
-#define SKY true
 #define MAX_BOUNCES  5
 #define SAMPLES_PER_PIXEL 1
 
@@ -356,7 +355,7 @@ void main()
             {
                 vec3 skyColor = vec3(0.0, 0.0, 0.0);
 
-                if (SKY)
+                if (u_isDay == 0)
                 {
                     float t = clamp(currentRd.y, -1.0, 1.0);
 

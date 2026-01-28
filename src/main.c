@@ -39,7 +39,8 @@ float g_mouseSensitivity = 0.1f;
 int g_frameCount = 0;
 Camera g_camera = {0.0f, 0.0f, 200.0f, -90.0f, 0.0f, 1.0f};
 float g_cameraSpeed = 100.0f;
-bool cameraLock = false;
+bool g_cameraLock = false;
+int g_isDay = 1;
 
 float g_lastFrame = 0.0f;
 float g_deltaTime = 0.0f;
@@ -66,15 +67,13 @@ bool processInput(GLFWwindow* window)
         glfwSetWindowShouldClose(window, true);
     }
 
+    if (g_cameraLock) {return false;}
+
     bool moved = false;
     float cameraVelocity = g_cameraSpeed * g_deltaTime;
 
     float forwardX, forwardZ, rightX, rightZ;
     calculateCameraVectors(&g_camera, &forwardX, &forwardZ, &rightX, &rightZ);
-
-    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {cameraLock = !cameraLock;}
-    
-    if (cameraLock) {return moved;}
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
@@ -129,6 +128,8 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 
 void mouseCallback(GLFWwindow* window, double xpos, double ypos)
 {
+    if (g_cameraLock) {return;}
+
     if (g_firstMouse)
     {
         g_lastX = (float)xpos;
@@ -152,6 +153,22 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos)
     if (g_camera.pitch < -89.0f) {g_camera.pitch = -89.0f;}
 
     g_frameCount = 0;
+}
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    // Day / Night
+    if (key == GLFW_KEY_N && action == GLFW_PRESS)
+    {
+        g_isDay = !g_isDay;
+        g_frameCount = 0;
+    }
+
+    // Camera lock
+    if (key == GLFW_KEY_L && action == GLFW_PRESS)
+    {
+        g_cameraLock = !g_cameraLock;
+    }
 }
 
 GLuint compileShader(const char* filename, GLenum type)
@@ -455,6 +472,8 @@ int main(int argc, char* argv[])
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouseCallback);
 
+    glfwSetKeyCallback(window, keyCallback);
+
     // Load GL functions
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
@@ -494,13 +513,6 @@ int main(int argc, char* argv[])
     }
 
     setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH, ssboTriangleMaterial, &scene);
-    
-    int day = 1;
-
-    //GLuint program = createShaderProgram();
-    //glUseProgram(program);
-
-    //setupAccumulationBuffers(WIDTH, HEIGHT);
 
     GLuint computeProgram = createComputeProgram();
     GLuint displayProgram = createShaderProgram();
@@ -544,6 +556,7 @@ int main(int argc, char* argv[])
 
         glUseProgram(computeProgram);
 
+        glUniform1i(glGetUniformLocation(computeProgram, "u_isDay"), g_isDay);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camForward"), forward.x, forward.y, forward.z);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camRight"), right.x, right.y, right.z);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camUp"), trueUp.x, trueUp.y, trueUp.z);

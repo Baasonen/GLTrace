@@ -2,23 +2,7 @@
 #define SHADER_STRUCTS_H
 
 #include "obj_loader.h"
-
-
-typedef struct 
-{
-    unsigned int x, y, z, pad;
-} Index4;
-
-typedef struct 
-{
-    float x, y, z, a;
-} Vec4;
-
-typedef struct 
-{
-    float m[4][4];
-} Mat4;
-
+#include "matrix.h"
 
 typedef struct 
 {
