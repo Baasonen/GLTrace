@@ -32,7 +32,7 @@ emissiveR = add_material(
     0.0,
     0.0,
     0.0,
-    10.0,
+    12.0,
     1.0
 )
 
@@ -42,7 +42,7 @@ emissiveG = add_material(
     0.0,
     0.0,
     0.0,
-    10.0,
+    12.0,
     1.0
 )
 
@@ -51,7 +51,16 @@ emissiveB = add_material(
     0.0,
     0.0,
     0.0,
-    10.0,
+    12.0,
+    1.0
+)
+
+emissiveW = add_material(
+    1.0, 1.0, 1.0,
+    0.0,
+    0.0,
+    0.0,
+    20.0,
     1.0
 )
 
@@ -73,30 +82,30 @@ matteW = add_material(
     1.0
 )
 
-room = add_source("Room.obj")
+room = add_source("city.obj")
 
 add_instance(
     pos=(0, 0, 0),
-    scale=(1, 1, 1),
+    scale=(4, 4, 4),
     rotation=(0, 0, 0),
     material_index=matteW,
     source_index=room
 )
 
 add_sphere(
-    pos=(0, 0, 0),
-    radius=10,
-    material_index=emissiveR
-)
-add_sphere(
-    pos=(60, 20, 0),
-    radius=10,
-    material_index=emissiveB
-)
-add_sphere(
-    pos=(-40, -20, 0),
-    radius=10,
-    material_index=emissiveG
-)
+    pos=(-520, 750, -1400),
+    radius=50,
+    material_index=emissiveR)
 
-write_scene("room.scene")
+add_sphere(
+    pos=(-520, 600, -1400),
+    radius=50,
+    material_index=emissiveG)
+
+add_sphere(
+    pos=(-520, 900, -1400),
+    radius=50,
+    material_index=emissiveB)
+
+
+write_scene("city.scene")

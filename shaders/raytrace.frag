@@ -55,6 +55,7 @@ uniform sampler2D u_historyTexture;
 uniform vec3 u_cameraPos;
 uniform float u_cameraYaw;
 uniform float u_cameraPitch;
+uniform int u_isDay;
 
 uniform vec3 u_camForward;
 uniform vec3 u_camRight;
@@ -400,6 +401,7 @@ void main()
     vec3 prevColor = texture(u_historyTexture, pixelCoord / u_resolution).rgb;
     prevColor = pow(prevColor, vec3(2.2));
 
+    //float weight = float(u_frameCount);
     float weight = 1.0 / float(u_frameCount);
     vec3 finalLinear = mix(prevColor, frameColor, weight);
 

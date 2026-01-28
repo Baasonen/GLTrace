@@ -452,10 +452,14 @@ int main(int argc, char* argv[])
 
     setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH, ssboTriangleMaterial, &scene);
     
+    int day = 1;
+
     GLuint program = createShaderProgram();
     glUseProgram(program);
 
     setupAccumulationBuffers(WIDTH, HEIGHT);
+
+    glUniform1i(glGetUniformLocation(program, "u_isDay"), day);
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -463,6 +467,8 @@ int main(int argc, char* argv[])
         float currentFrame = (float)glfwGetTime();
         g_deltaTime = currentFrame - g_lastFrame;
         g_lastFrame = currentFrame;
+
+        //printf("%f, %f, %f\n", g_camera.x, g_camera.y, g_camera.z);
 
         if (g_framebufferResized)
         {
@@ -497,7 +503,6 @@ int main(int argc, char* argv[])
         glUniform3f(glGetUniformLocation(program, "u_camForward"), forward.x, forward.y, forward.z);
         glUniform3f(glGetUniformLocation(program, "u_camRight"), right.x, right.y, right.z);
         glUniform3f(glGetUniformLocation(program, "u_camUp"), trueUp.x, trueUp.y, trueUp.z);
-
         glUniform2f(glGetUniformLocation(program, "u_resolution"), (float)g_newWidth, (float)g_newHeight);
 
         glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
