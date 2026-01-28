@@ -92,20 +92,6 @@ add_instance(
     source_index=room
 )
 
-add_sphere(
-    pos=(-520, 750, -1400),
-    radius=50,
-    material_index=emissiveR)
-
-add_sphere(
-    pos=(-520, 600, -1400),
-    radius=50,
-    material_index=emissiveG)
-
-add_sphere(
-    pos=(-520, 900, -1400),
-    radius=50,
-    material_index=emissiveB)
 
 
-write_scene("city.scene")
+write_scene("city_ns.scene")

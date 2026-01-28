@@ -28,8 +28,8 @@ __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 
 float radians(float deg) {return deg * (M_PI / 180.0f);}
 
-#define WIDTH 1280
-#define HEIGHT 720
+#define WIDTH 1920
+#define HEIGHT 1080
 
 bool g_firstMouse = true;
 float g_lastX = WIDTH / 2.0f;
@@ -179,10 +179,35 @@ GLuint compileShader(const char* filename, GLenum type)
     return shader;
 }
 
+GLuint createComputeProgram()
+{
+    GLuint computeShader = compileShader("shaders/raytrace.comp", GL_COMPUTE_SHADER);
+    if (!computeShader) {return 0;}
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, computeShader);
+    glLinkProgram(program);
+
+    GLint success;
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if (!success)
+    {
+        char infoLog[512];
+        glGetProgramInfoLog(program, 512, NULL, infoLog);
+        fprintf(stderr, "Linking error \n %s \n", infoLog);
+        glDeleteProgram(program);
+        return 0;
+    }
+
+    glDeleteShader(computeShader);
+
+    return program;
+}
+
 GLuint createShaderProgram()
 {
     GLuint vertexShader = compileShader("shaders/fullscreen.vert", GL_VERTEX_SHADER);
-    GLuint fragmentShader = compileShader("shaders/raytrace.frag", GL_FRAGMENT_SHADER);
+    GLuint fragmentShader = compileShader("shaders/display.frag", GL_FRAGMENT_SHADER);
 
     if (vertexShader == 0 || fragmentShader == 0) {return 0;}
 
@@ -208,17 +233,12 @@ GLuint createShaderProgram()
     return program;
 }
 
-// FBO
-GLuint g_fbo;
 GLuint g_accumTexture;
 GLuint g_outputTexture;
 
 // Init frame buffers
 void setupAccumulationBuffers(int width, int height)
 {
-    glGenFramebuffers(1, &g_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
-
     // TX1
     glGenTextures(1, &g_accumTexture);
     glBindTexture(GL_TEXTURE_2D, g_accumTexture);
@@ -242,9 +262,32 @@ void setupAccumulationBuffers(int width, int height)
     {
         fprintf(stderr, "Framebuffer incomplete\n");
     }
+}
 
-    // Unbind FBO
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+void setupTextures(int width, int height)
+{
+    if (g_accumTexture) glDeleteTextures(1, &g_accumTexture);
+    if (g_outputTexture) glDeleteTextures(1, &g_outputTexture);
+
+    // TX2
+    glGenTextures(1, &g_accumTexture);
+    glBindTexture(GL_TEXTURE_2D, g_accumTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // TX 2
+    glGenTextures(1, &g_outputTexture);
+    glBindTexture(GL_TEXTURE_2D, g_outputTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 MeshData buildSceneMesh(SceneDescription* scene)
@@ -454,12 +497,15 @@ int main(int argc, char* argv[])
     
     int day = 1;
 
-    GLuint program = createShaderProgram();
-    glUseProgram(program);
+    //GLuint program = createShaderProgram();
+    //glUseProgram(program);
 
-    setupAccumulationBuffers(WIDTH, HEIGHT);
+    //setupAccumulationBuffers(WIDTH, HEIGHT);
 
-    glUniform1i(glGetUniformLocation(program, "u_isDay"), day);
+    GLuint computeProgram = createComputeProgram();
+    GLuint displayProgram = createShaderProgram();
+
+    setupTextures(WIDTH, HEIGHT);
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -472,11 +518,7 @@ int main(int argc, char* argv[])
 
         if (g_framebufferResized)
         {
-            glDeleteTextures(1, &g_accumTexture);
-            glDeleteTextures(1, &g_outputTexture);
-            glDeleteFramebuffers(1, &g_fbo);
-
-            setupAccumulationBuffers(g_newWidth, g_newHeight);
+            setupTextures(g_newWidth, g_newHeight);
 
             g_frameCount = 0;
             g_framebufferResized = false;
@@ -500,41 +542,62 @@ int main(int argc, char* argv[])
         Vec4 trueUp = crossProduct(right, forward);
         normalize(&trueUp);
 
-        glUniform3f(glGetUniformLocation(program, "u_camForward"), forward.x, forward.y, forward.z);
-        glUniform3f(glGetUniformLocation(program, "u_camRight"), right.x, right.y, right.z);
-        glUniform3f(glGetUniformLocation(program, "u_camUp"), trueUp.x, trueUp.y, trueUp.z);
-        glUniform2f(glGetUniformLocation(program, "u_resolution"), (float)g_newWidth, (float)g_newHeight);
+        glUseProgram(computeProgram);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+        glUniform3f(glGetUniformLocation(computeProgram, "u_camForward"), forward.x, forward.y, forward.z);
+        glUniform3f(glGetUniformLocation(computeProgram, "u_camRight"), right.x, right.y, right.z);
+        glUniform3f(glGetUniformLocation(computeProgram, "u_camUp"), trueUp.x, trueUp.y, trueUp.z);
+        glUniform2f(glGetUniformLocation(computeProgram, "u_resolution"), (float)g_newWidth, (float)g_newHeight);
+
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_accumTexture, 0);
 
-        glUniform1i(glGetUniformLocation(program, "u_frameCount"), g_frameCount);
-        glUniform1i(glGetUniformLocation(program, "u_historyTexture"), 0);
-        glUniform3f(glGetUniformLocation(program, "u_cameraPos"), g_camera.x, g_camera.y, g_camera.z);
-        glUniform1f(glGetUniformLocation(program, "u_cameraYaw"), g_camera.yaw);
-        glUniform1f(glGetUniformLocation(program, "u_cameraPitch"), g_camera.pitch);
+        glUniform1i(glGetUniformLocation(computeProgram, "u_frameCount"), g_frameCount);
+        glUniform1i(glGetUniformLocation(computeProgram, "u_historyTexture"), 0);
+        glUniform3f(glGetUniformLocation(computeProgram, "u_cameraPos"), g_camera.x, g_camera.y, g_camera.z);
+        glUniform1f(glGetUniformLocation(computeProgram, "u_cameraYaw"), g_camera.yaw);
+        glUniform1f(glGetUniformLocation(computeProgram, "u_cameraPitch"), g_camera.pitch);
+
+        glActiveTexture(GL_TEXTURE0);
+
+        glBindTexture(GL_TEXTURE_2D, g_accumTexture);
+        glUniform1i(glGetUniformLocation(computeProgram, "u_historyTexture"), 0);
+
+        // Binding 0: Write Output (Image Unit)
+        glBindImageTexture(0, g_outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glDispatchCompute((g_newWidth + 15) / 16, (g_newHeight + 15) / 16, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+        glViewport(0, 0, g_newWidth, g_newHeight);
+        glClear(GL_COLOR_BUFFER_BIT); // Clear default framebuffer
+
+        glUseProgram(displayProgram);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, g_outputTexture);
+        glUniform1i(glGetUniformLocation(displayProgram, "u_texture"), 0);
 
+        // Draw Fullscreen Quad
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
         GLuint temp = g_accumTexture;
         g_accumTexture = g_outputTexture;
         g_outputTexture = temp;
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, g_accumTexture);
-
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
         glfwSwapBuffers(window);
         glfwPollEvents();
-    }
+    }   
 
+    glDeleteBuffers(1, &ssboBVH);
+    glDeleteBuffers(1, &ssboIndices);
+    glDeleteBuffers(1, &ssboVertices);
+    glDeleteBuffers(1, &ssboMaterials);
+    glDeleteBuffers(1, &ssboTriangleMaterial);
+
+    glDeleteTextures(1, &g_accumTexture);
+    glDeleteTextures(1, &g_outputTexture);
+    glDeleteVertexArrays(1, &vao);
+
+    glFinish();
     glfwTerminate();
     return 0;
 }
