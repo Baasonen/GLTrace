@@ -160,7 +160,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     // Day / Night
     if (key == GLFW_KEY_N && action == GLFW_PRESS)
     {
-        g_isDay = !g_isDay;
+        g_isDay++;
+
+        if (g_isDay > 2) {g_isDay = 0;}
+
         g_frameCount = 0;
     }
 

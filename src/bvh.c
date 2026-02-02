@@ -267,8 +267,11 @@ void analyzeBVH(BVH* bvh)
     
     float avgTris = stats.leafCount > 0 ? (float)stats.totalTrisInLeaves / stats.leafCount : 0;
 
+    size_t bvhSize = sizeof(BVHNode) * bvh->nodeCount;
+
     printf("Total Nodes:      %u\n", bvh->nodeCount);
     printf("Leaf Nodes:       %d\n", stats.leafCount);
     printf("Max Depth:        %d\n", stats.maxDepth);
     printf("Avg Tris/Leaf:    %.2f\n", avgTris);
+    printf("BVH Size:         %.2f KB\n", bvhSize / 1024.0f);
 }

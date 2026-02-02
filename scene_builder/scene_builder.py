@@ -92,6 +92,18 @@ add_instance(
     source_index=room
 )
 
+import random as r
+
+for x in range(10):
+    add_instance(
+    pos=(0, 0, -3500 * x),
+    scale=(4, 4, 4),
+    rotation=(0, 0, 0),
+    material_index=matteW,
+    source_index=room
+    )
+
+
 
 
 write_scene("city_ns.scene")
