@@ -2,7 +2,7 @@
 // See LICENSE for details
 
 #include <glad/glad.h>
-#include <glfw3.h>
+#include <GLFW/glfw3.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>

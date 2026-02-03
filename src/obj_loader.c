@@ -116,7 +116,7 @@ int loadObj(const char* filename, MeshData* mesh)
         // Parse face
         else if (line[0] == 'f' && line[1] == ' ')
         {
-            unsigned int v[4], vt[4], vn[4];
+            unsigned int v[4];
             int count = 0;
 
             char* p = line + 1;

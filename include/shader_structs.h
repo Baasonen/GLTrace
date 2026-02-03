@@ -9,7 +9,6 @@ typedef struct
     float x, y, z;
     float yaw, pitch;
     float focalLength;
-    float padding[2];
 } Camera;
 
 typedef struct 
