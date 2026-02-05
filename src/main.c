@@ -199,9 +199,9 @@ GLuint compileShader(const char* filename, GLenum type)
     return shader;
 }
 
-GLuint createComputeProgram()
+GLuint createComputeProgram(const char* filename)
 {
-    GLuint computeShader = compileShader("shaders/raytrace.comp", GL_COMPUTE_SHADER);
+    GLuint computeShader = compileShader(filename, GL_COMPUTE_SHADER);
     if (!computeShader) {return 0;}
 
     GLuint program = glCreateProgram();
@@ -256,6 +256,9 @@ GLuint createShaderProgram()
 GLuint g_accumTexture;
 GLuint g_outputTexture;
 
+GLuint g_normalTexture;
+GLuint g_denoisedTexture;
+
 // Init frame buffers
 void setupAccumulationBuffers(int width, int height)
 {
@@ -304,6 +307,21 @@ void setupTextures(int width, int height)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    if (g_normalTexture) glDeleteTextures(1, &g_normalTexture);
+    if (g_denoisedTexture) glDeleteTextures(1, &g_denoisedTexture);
+
+    glGenTextures(1, &g_normalTexture);
+    glBindTexture(GL_TEXTURE_2D, g_normalTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glGenTextures(1, &g_denoisedTexture);
+    glBindTexture(GL_TEXTURE_2D, g_denoisedTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -517,8 +535,9 @@ int main(int argc, char* argv[])
 
     setupSceneData(ssboSpheres, ssboMaterials, ssboVertices, ssboIndices, ssboBVH, ssboTriangleMaterial, &scene);
 
-    GLuint computeProgram = createComputeProgram();
+    GLuint computeProgram = createComputeProgram("shaders/raytrace.comp");
     GLuint displayProgram = createShaderProgram();
+    GLuint denoiseProgram = createComputeProgram("shaders/denoise.comp");
 
     setupTextures(WIDTH, HEIGHT);
 
@@ -580,7 +599,17 @@ int main(int argc, char* argv[])
 
         // Binding 0: Write Output (Image Unit)
         glBindImageTexture(0, g_outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, g_normalTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glDispatchCompute((g_newWidth + 15) / 16, (g_newHeight + 15) / 16, 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+        glUseProgram(denoiseProgram);
+        glUniform2f(glGetUniformLocation(denoiseProgram, "u_resolution"), (float)g_newWidth, (float)g_newHeight);
+        glBindImageTexture(0, g_outputTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(1, g_normalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+        glBindImageTexture(2, g_denoisedTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        glDispatchCompute((g_newWidth + 15) / 16, (g_newHeight + 15) / 16, 1);
+    
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
         glViewport(0, 0, g_newWidth, g_newHeight);
@@ -589,7 +618,7 @@ int main(int argc, char* argv[])
         glUseProgram(displayProgram);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, g_outputTexture);
+        glBindTexture(GL_TEXTURE_2D, g_denoisedTexture);
         glUniform1i(glGetUniformLocation(displayProgram, "u_texture"), 0);
 
         // Draw Fullscreen Quad

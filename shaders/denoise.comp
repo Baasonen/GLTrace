@@ -1,0 +1,57 @@
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(rgba32f, binding = 0) uniform readonly image2D img_input;   
+layout(rgba32f, binding = 1) uniform readonly image2D img_normals;
+layout(rgba32f, binding = 2) uniform writeonly image2D img_final;
+
+uniform vec2 u_resolution;
+
+void main()
+{
+    ivec2 uv = ivec2(gl_GlobalInvocationID.xy);
+    if (uv.x >= u_resolution.x || uv.y >= u_resolution.y) {return;}
+
+    vec3 centerCol = imageLoad(img_input, uv).rgb;
+    vec4 centerData = imageLoad(img_normals, uv);
+    float centerDepth = centerData.w;
+    vec3 centerNorm = centerData.rgb;
+
+    if (centerDepth <= 0.0)
+    {
+        imageStore(img_final, uv, vec4(centerCol, 1.0));
+        return;
+    }
+
+    vec3 sumColor = centerCol;
+    float totalWight = 1.0;
+
+    for (int x = -2; x <= 2; x++)
+    {
+        for (int y = -2; y <= 2; y++)
+        {
+            if (x == 0 && y == 0) {continue;}
+
+            ivec2 neighborUV = uv + ivec2(x, y);
+            vec3 neighborCol = imageLoad(img_input, neighborUV).rgb;
+            vec4 neighborData = imageLoad(img_normals, neighborUV);
+
+            float distanceSq = float(x * x + y * y);
+            float weightSq = exp(-distanceSq / 4.0);
+
+            float normalWeight = pow(max(0.0, dot(centerNorm, neighborData.rgb)), 64.0);
+
+            float depthWeight = exp(-abs(centerDepth - neighborData.w) / 0.1);
+
+            float colorWeight = exp(-distance(centerCol, neighborCol) * 10.0);
+
+            float weight = weightSq * normalWeight * depthWeight * colorWeight;
+
+            sumColor += neighborCol * weight;
+            totalWight += weight;
+        }
+    }
+
+    imageStore(img_final, uv, vec4(sumColor / totalWight, 1.0));
+}

@@ -6,6 +6,7 @@
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 layout(rgba32f, binding = 0) uniform image2D img_output;
+layout(rgba32f, binding = 1) uniform image2D img_normals;
 
 struct Sphere 
 {
@@ -265,6 +266,7 @@ void main()
 
     // Recursive raytracing
     vec3 frameColor = vec3(0.0, 0.0, 0.0);
+    vec4 firstNormal = vec4(0.0);
 
     for (int s = 0; s < samplesPerPixel; s++)
     {
@@ -346,6 +348,8 @@ void main()
                 // Offset to prevent self intersection
                 currentRo = hitPos + normal * 0.001;
 
+                if (bounce == 0 && s == 0) {firstNormal = vec4(normal * 0.5 + 0.5, minT);}
+
                 // Russian roulette
                 float p = max(throughput.r, max(throughput.g, throughput.b));
                 if (random(sampleSeed) > p) {break;}
@@ -394,7 +398,8 @@ void main()
                 break;
             }
         }
-
+        float maxIntensity = 5.0;
+        accumulatedLight = min(accumulatedLight, vec3(maxIntensity));
         frameColor += accumulatedLight;
     }
     
@@ -408,4 +413,5 @@ void main()
     vec3 finalLinear = mix(prevColor, frameColor, weight);
 
     imageStore(img_output, pixelCoord, vec4(finalLinear, 1.0));
+    imageStore(img_normals, pixelCoord, firstNormal);
 }
