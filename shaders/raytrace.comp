@@ -273,11 +273,7 @@ void main()
     {
         uint sampleSeed = seed + uint(s) * 9781u;
 
-        float haltonX = fract(float(u_frameCount) * 0.5);
-        float haltonY = fract(float(u_frameCount) * 0.3333333);
-        vec2 jitter = vec2(haltonX, haltonY) - 0.5;
-        
-        vec2 uv = (vec2(pixelCoord) + 0.5 + jitter) / u_resolution * 2.0 - 1.0;
+        vec2 uv = (vec2(pixelCoord) + 0.5) / u_resolution * 2.0 - 1.0;
         uv.x *= aspect;
 
         vec3 rd = normalize(u_camForward + uv.x * tanFov * u_camRight + uv.y * tanFov * u_camUp);

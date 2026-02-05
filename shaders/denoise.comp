@@ -32,8 +32,8 @@ void main()
     float totalWight = 1.0;
 
     float sDepth = 0.5;
-    float sNormal = 128.0;
-    float sColor = 4.0;
+    float sNormal = 256.0;
+    float sColor = 2.0;
 
     // 5x5 B3-Spline approx.
     float kernel[5] = float[](1.0 / 16.0, 1.0 / 4.0, 3.0 / 8.0, 1.0 / 4.0, 1.0 / 16.0);
@@ -56,7 +56,8 @@ void main()
             vec3 neighborNorm = normalize(neighborData.rgb * 2.0 -1.0);
             float neighborDepth = neighborData.w;
 
-            float kernelWeight = kernel[abs(x) + 2] * kernel[abs(y) + 2];
+            float distanceSq = float(x * x + y * y);
+            float weightSq = exp(-distanceSq / 4.0);
 
             float normalWeight = pow(max(0.0, dot(centerNorm, neighborNorm)), sNormal);
             
@@ -67,9 +68,9 @@ void main()
             float colorDist = dot(diffColor, diffColor);
             float colorWeight = exp(-colorDist * sColor);
 
-            float specularProtection = mix(0.05, 1.0, centerRoughness);
+            float specularProtection = mix(0.01, 1.0, centerRoughness);
 
-            float weight = kernelWeight * normalWeight * depthWeight * colorWeight * specularProtection;
+            float weight = weightSq * normalWeight * depthWeight * colorWeight * specularProtection;
 
             sumColor += neighborCol * weight;
             totalWight += weight;
