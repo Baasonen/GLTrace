@@ -7,25 +7,36 @@ layout(rgba32f, binding = 1) uniform readonly image2D img_normals;
 layout(rgba32f, binding = 2) uniform writeonly image2D img_final;
 
 uniform vec2 u_resolution;
+uniform int u_stepWidth;
 
 void main()
 {
     ivec2 uv = ivec2(gl_GlobalInvocationID.xy);
     if (uv.x >= u_resolution.x || uv.y >= u_resolution.y) {return;}
 
-    vec3 centerCol = imageLoad(img_input, uv).rgb;
+    vec4 centerColorRough = imageLoad(img_input, uv);
+    vec3 centerCol = centerColorRough.rgb;
+    float centerRoughness = centerColorRough.a;
+
     vec4 centerData = imageLoad(img_normals, uv);
     float centerDepth = centerData.w;
-    vec3 centerNorm = centerData.rgb;
+    vec3 centerNorm = normalize(centerData.rgb * 2.0 - 1.0);
 
     if (centerDepth <= 0.0)
     {
-        imageStore(img_final, uv, vec4(centerCol, 1.0));
+        imageStore(img_final, uv, centerColorRough);
         return;
     }
 
     vec3 sumColor = centerCol;
     float totalWight = 1.0;
+
+    float sDepth = 0.5;
+    float sNormal = 128.0;
+    float sColor = 4.0;
+
+    // 5x5 B3-Spline approx.
+    float kernel[5] = float[](1.0 / 16.0, 1.0 / 4.0, 3.0 / 8.0, 1.0 / 4.0, 1.0 / 16.0);
 
     for (int x = -2; x <= 2; x++)
     {
@@ -33,25 +44,37 @@ void main()
         {
             if (x == 0 && y == 0) {continue;}
 
-            ivec2 neighborUV = uv + ivec2(x, y);
-            vec3 neighborCol = imageLoad(img_input, neighborUV).rgb;
+            ivec2 offset = ivec2(x, y) * u_stepWidth;
+            ivec2 neighborUV = uv + offset;
+
+            if (neighborUV.x < 0 || neighborUV.y < 0 || neighborUV.x >= u_resolution.x || neighborUV.y >= u_resolution.y) {continue;}
+
+            vec4 neighborColorRough = imageLoad(img_input, neighborUV);
+            vec3 neighborCol = neighborColorRough.rgb;
+
             vec4 neighborData = imageLoad(img_normals, neighborUV);
+            vec3 neighborNorm = normalize(neighborData.rgb * 2.0 -1.0);
+            float neighborDepth = neighborData.w;
 
-            float distanceSq = float(x * x + y * y);
-            float weightSq = exp(-distanceSq / 4.0);
+            float kernelWeight = kernel[abs(x) + 2] * kernel[abs(y) + 2];
 
-            float normalWeight = pow(max(0.0, dot(centerNorm, neighborData.rgb)), 64.0);
+            float normalWeight = pow(max(0.0, dot(centerNorm, neighborNorm)), sNormal);
+            
+            float depthDiff = abs(centerDepth - neighborDepth);
+            float depthWeight = exp(-depthDiff * depthDiff * sDepth);
 
-            float depthWeight = exp(-abs(centerDepth - neighborData.w) / 0.1);
+            vec3 diffColor = centerCol - neighborCol;
+            float colorDist = dot(diffColor, diffColor);
+            float colorWeight = exp(-colorDist * sColor);
 
-            float colorWeight = exp(-distance(centerCol, neighborCol) * 10.0);
+            float specularProtection = mix(0.05, 1.0, centerRoughness);
 
-            float weight = weightSq * normalWeight * depthWeight * colorWeight;
+            float weight = kernelWeight * normalWeight * depthWeight * colorWeight * specularProtection;
 
             sumColor += neighborCol * weight;
             totalWight += weight;
         }
     }
 
-    imageStore(img_final, uv, vec4(sumColor / totalWight, 1.0));
+    imageStore(img_final, uv, vec4(sumColor / totalWight, centerRoughness));
 }

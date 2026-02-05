@@ -1,6 +1,6 @@
 #version 460 core
 
-#define MAX_BOUNCES  5
+#define MAX_BOUNCES  6
 #define SAMPLES_PER_PIXEL 1
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -267,14 +267,18 @@ void main()
     // Recursive raytracing
     vec3 frameColor = vec3(0.0, 0.0, 0.0);
     vec4 firstNormal = vec4(0.0);
+    float firstRoughness = 1.0;
 
     for (int s = 0; s < samplesPerPixel; s++)
     {
         uint sampleSeed = seed + uint(s) * 9781u;
 
-        vec2 jitter = (vec2(random(sampleSeed), random(sampleSeed)) - 0.5);
-        vec2 uv = (vec2(pixelCoord) + 0.5) / u_resolution * 2.0 - 1.0;
-            uv.x *= aspect;
+        float haltonX = fract(float(u_frameCount) * 0.5);
+        float haltonY = fract(float(u_frameCount) * 0.3333333);
+        vec2 jitter = vec2(haltonX, haltonY) - 0.5;
+        
+        vec2 uv = (vec2(pixelCoord) + 0.5 + jitter) / u_resolution * 2.0 - 1.0;
+        uv.x *= aspect;
 
         vec3 rd = normalize(u_camForward + uv.x * tanFov * u_camRight + uv.y * tanFov * u_camUp);
 
@@ -348,7 +352,11 @@ void main()
                 // Offset to prevent self intersection
                 currentRo = hitPos + normal * 0.001;
 
-                if (bounce == 0 && s == 0) {firstNormal = vec4(normal * 0.5 + 0.5, minT);}
+                if (bounce == 0 && s == 0) 
+                {
+                    firstNormal = vec4(normal * 0.5 + 0.5, minT);
+                    firstRoughness = materials[materialIndex].roughness;    
+                }
 
                 // Russian roulette
                 float p = max(throughput.r, max(throughput.g, throughput.b));
@@ -398,20 +406,19 @@ void main()
                 break;
             }
         }
-        float maxIntensity = 5.0;
+        float maxIntensity = 7.0;
         accumulatedLight = min(accumulatedLight, vec3(maxIntensity));
         frameColor += accumulatedLight;
     }
     
     frameColor /= float(samplesPerPixel);
 
-    vec2 texUV = (vec2(pixelCoord) + 0.5) / u_resolution;
-    
+    vec2 texUV = (vec2(pixelCoord) + 0.5) / u_resolution; 
     vec3 prevColor = texture(u_historyTexture, texUV).rgb;
     
     float weight = 1.0 / float(u_frameCount);
     vec3 finalLinear = mix(prevColor, frameColor, weight);
 
-    imageStore(img_output, pixelCoord, vec4(finalLinear, 1.0));
+    imageStore(img_output, pixelCoord, vec4(finalLinear, firstRoughness));
     imageStore(img_normals, pixelCoord, firstNormal);
 }

@@ -1,6 +1,9 @@
 // Copyright (c) 2026 Henri Paasonen - GPLv2
 // See LICENSE for details
 
+// F: toggle denoise
+// N: toggle skybox
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
@@ -41,6 +44,7 @@ Camera g_camera = {0.0f, 0.0f, 200.0f, -90.0f, 0.0f, 1.0f};
 float g_cameraSpeed = 100.0f;
 bool g_cameraLock = false;
 int g_isDay = 1;
+bool g_enableDenoise = true;
 
 float g_lastFrame = 0.0f;
 float g_deltaTime = 0.0f;
@@ -172,6 +176,11 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     {
         g_cameraLock = !g_cameraLock;
     }
+
+    if (key == GLFW_KEY_F && action == GLFW_PRESS)
+    {
+        g_enableDenoise = !g_enableDenoise;
+    }
 }
 
 GLuint compileShader(const char* filename, GLenum type)
@@ -258,6 +267,7 @@ GLuint g_outputTexture;
 
 GLuint g_normalTexture;
 GLuint g_denoisedTexture;
+GLuint g_denoiseSwapTexture;
 
 // Init frame buffers
 void setupAccumulationBuffers(int width, int height)
@@ -321,6 +331,12 @@ void setupTextures(int width, int height)
 
     glGenTextures(1, &g_denoisedTexture);
     glBindTexture(GL_TEXTURE_2D, g_denoisedTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glGenTextures(1, &g_denoiseSwapTexture);
+    glBindTexture(GL_TEXTURE_2D, g_denoiseSwapTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -597,20 +613,40 @@ int main(int argc, char* argv[])
         glBindTexture(GL_TEXTURE_2D, g_accumTexture);
         glUniform1i(glGetUniformLocation(computeProgram, "u_historyTexture"), 0);
 
-        // Binding 0: Write Output (Image Unit)
+        // RT 
         glBindImageTexture(0, g_outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glBindImageTexture(1, g_normalTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glDispatchCompute((g_newWidth + 15) / 16, (g_newHeight + 15) / 16, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
+        // Denoiser
         glUseProgram(denoiseProgram);
         glUniform2f(glGetUniformLocation(denoiseProgram, "u_resolution"), (float)g_newWidth, (float)g_newHeight);
-        glBindImageTexture(0, g_outputTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(1, g_normalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-        glBindImageTexture(2, g_denoisedTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        glDispatchCompute((g_newWidth + 15) / 16, (g_newHeight + 15) / 16, 1);
-    
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+        GLuint readTex = g_outputTexture;
+        GLuint writeTex = g_denoisedTexture;
+
+        int denoisePasses = 4;
+
+        if (g_enableDenoise)
+        {
+            for (int i = 0; i < denoisePasses; i++)
+            {
+                glUniform1i(glGetUniformLocation(denoiseProgram, "u_stepWidth"), 1 << i);
+
+                glBindImageTexture(0, readTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+                glBindImageTexture(1, g_normalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+                glBindImageTexture(2, writeTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+                glDispatchCompute((g_newWidth + 15) / 16, (g_newHeight + 15) / 16, 1);
+                glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+                readTex = writeTex;
+
+                // Toggle write target texture
+                writeTex = (writeTex == g_denoisedTexture) ? g_denoiseSwapTexture : g_denoisedTexture;
+            }
+        }
 
         glViewport(0, 0, g_newWidth, g_newHeight);
         glClear(GL_COLOR_BUFFER_BIT); // Clear default framebuffer
@@ -618,7 +654,7 @@ int main(int argc, char* argv[])
         glUseProgram(displayProgram);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, g_denoisedTexture);
+        glBindTexture(GL_TEXTURE_2D, readTex);
         glUniform1i(glGetUniformLocation(displayProgram, "u_texture"), 0);
 
         // Draw Fullscreen Quad
@@ -640,6 +676,8 @@ int main(int argc, char* argv[])
 
     glDeleteTextures(1, &g_accumTexture);
     glDeleteTextures(1, &g_outputTexture);
+    glDeleteTextures(1, &g_denoisedTexture);
+    glDeleteTextures(1, &g_denoiseSwapTexture);
     glDeleteVertexArrays(1, &vao);
 
     glFinish();
