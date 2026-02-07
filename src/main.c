@@ -626,7 +626,7 @@ int main(int argc, char* argv[])
         GLuint readTex = g_outputTexture;
         GLuint writeTex = g_denoisedTexture;
 
-        int denoisePasses = 4;
+        int denoisePasses = 3;
 
         if (g_enableDenoise)
         {
