@@ -32,15 +32,17 @@ void main()
     float totalWight = 1.0;
 
     float sDepth = 0.5;
-    float sNormal = 256.0;
+    float sNormal = 128.0;
     float sColor = 2.0;
 
     // 5x5 B3-Spline approx.
     float kernel[5] = float[](1.0 / 16.0, 1.0 / 4.0, 3.0 / 8.0, 1.0 / 4.0, 1.0 / 16.0);
 
-    for (int x = -2; x <= 2; x++)
+    int radius = int(mix(1.0, 2.0, centerRoughness));
+
+    for (int x = -radius; x <= radius; x++)
     {
-        for (int y = -2; y <= 2; y++)
+        for (int y = -radius; y <= radius; y++)
         {
             if (x == 0 && y == 0) {continue;}
 
@@ -64,11 +66,13 @@ void main()
             float depthDiff = abs(centerDepth - neighborDepth);
             float depthWeight = exp(-depthDiff * depthDiff * sDepth);
 
-            vec3 diffColor = centerCol - neighborCol;
-            float colorDist = dot(diffColor, diffColor);
-            float colorWeight = exp(-colorDist * sColor);
+            float lumCenter = dot(centerCol, vec3(0.299, 0.587, 0.114));
+            float lumNeighbor = dot(neighborCol, vec3(0.299, 0.587, 0.114));
+            float lumDiff = abs(lumCenter - lumNeighbor);
 
-            float specularProtection = mix(0.01, 1.0, centerRoughness);
+            float colorWeight = exp(-lumDiff * 8.0);
+
+            float specularProtection = clamp(centerRoughness * centerRoughness, 0.05, 1.0);
 
             float weight = weightSq * normalWeight * depthWeight * colorWeight * specularProtection;
 

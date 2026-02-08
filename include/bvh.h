@@ -44,7 +44,6 @@ typedef struct
     int totalTrisInLeaves;
 } BVHStats;
 
-
 void updateNodeBounds(BVH* bvh, uint32_t nodeIdx, MeshData* mesh, const uint32_t* indices);
 
 void subdivideSAH(BVH* bvh, uint32_t nodeIdx, MeshData* mesh);

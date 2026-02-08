@@ -239,7 +239,7 @@ void buildBVH(BVH* bvh, MeshData* mesh)
     bvh->nodes[0].triCount = mesh->triangleCount;
     updateNodeBounds(bvh, 0, mesh, mesh->indices);
     subdivideSAH(bvh, 0, mesh);
-    printf("BVH built\n");
+    printf("\nBVH built\n");
     analyzeBVH(bvh);
 }
 
@@ -273,5 +273,5 @@ void analyzeBVH(BVH* bvh)
     printf("Leaf Nodes:       %d\n", stats.leafCount);
     printf("Max Depth:        %d\n", stats.maxDepth);
     printf("Avg Tris/Leaf:    %.2f\n", avgTris);
-    printf("BVH Size:         %.2f KB\n", bvhSize / 1024.0f);
+    printf("BVH Size:         %.2f MB\n", bvhSize / (1024.0f * 1024.0f));
 }

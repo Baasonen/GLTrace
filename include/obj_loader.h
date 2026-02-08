@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-// Match std430 alignment for vec3 (16 Byte)
 typedef struct 
 {
     float x, y, z;
@@ -19,7 +18,6 @@ typedef struct
     uint32_t indexCount;
     uint32_t triangleCount;
 
-    // Bounding box
     float minBounds[3];
     float maxBounds[3];
 

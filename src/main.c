@@ -481,7 +481,7 @@ int main(int argc, char* argv[])
         strncpy(scenePath, "scenes/1.scene", sizeof(scenePath));
     }
 
-    printf("\nGLTrace, loading: %s\n", scenePath);
+    printf("\nGLTrace, loading: %s\n\n", scenePath);
 
     if (!glfwInit())
     {

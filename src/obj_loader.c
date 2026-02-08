@@ -161,6 +161,6 @@ int loadObj(const char* filename, MeshData* mesh)
     }
 
     fclose(file);
-    printf("\nLoaded %s: %d vertices, %d triangles\n", filename, mesh->vertexCount, mesh->triangleCount);
+    printf("Loaded %s: %d vertices, %d triangles\n", filename, mesh->vertexCount, mesh->triangleCount);
     return 1;
 }
