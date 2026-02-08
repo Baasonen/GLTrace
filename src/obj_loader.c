@@ -26,7 +26,6 @@ int loadObj(const char* filename, MeshData* mesh)
         return 0;
     }
 
-    // Init bounds
     mesh->minBounds[0] = mesh->minBounds[1] = mesh->minBounds[2] = FLT_MAX;
     mesh->maxBounds[0] = mesh->maxBounds[1] = mesh->maxBounds[2] = -FLT_MAX;
 
@@ -34,7 +33,6 @@ int loadObj(const char* filename, MeshData* mesh)
     uint32_t tCount = 0;
     char line[1024];
 
-    // Count vertices and triangles
     while (fgets(line, sizeof(line), file))
     {
         if (line[0] == 'v' && (line[1] == ' ' || line[1] == '\t'))
@@ -48,7 +46,6 @@ int loadObj(const char* filename, MeshData* mesh)
 
             while (*p != '\0')
             {
-                // Skip space before word
                 while (*p == ' ' || *p == '\t') p++;
 
                 if (*p == '\0' || *p == '\n' || *p == '\r') break;
@@ -82,7 +79,6 @@ int loadObj(const char* filename, MeshData* mesh)
         return 0;
     }
 
-    // Parse data
     rewind(file);
 
     uint32_t vPtr = 0;
@@ -123,7 +119,6 @@ int loadObj(const char* filename, MeshData* mesh)
             
             while (count < 4)
             {
-                // 1. Skip leading whitespace
                 while (*p == ' ' || *p == '\t') {p++;}
                 if (*p == '\0' || *p == '\n' || *p == '\r') {break;}
 

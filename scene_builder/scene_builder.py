@@ -82,28 +82,41 @@ matteW = add_material(
     1.0
 )
 
-room = add_source("city.obj")
+emissiveSun = add_material(
+    1.0, 1.0, 0.99,
+    0.0,
+    0.0,
+    0.0,
+    200.0,
+    1.0
+)
+
+room = add_source("mountain1.obj")
 
 add_instance(
     pos=(0, 0, 0),
-    scale=(4, 4, 4),
+    scale=(100, 100, 100),
     rotation=(0, 0, 0),
     material_index=matteW,
     source_index=room
 )
 
-import random as r
+add_sphere(
+    pos=(200, 0, 0),
+    radius=100,
+    material_index=emissiveSun
+)
 
-for x in range(10):
-    add_instance(
-    pos=(0, 0, -3500 * x),
-    scale=(4, 4, 4),
-    rotation=(0, 0, 0),
-    material_index=matteW,
-    source_index=room
-    )
+add_sphere(
+    pos=(-200, 0, 0),
+    radius=50,
+    material_index=emissiveR
+)
 
+add_sphere(
+    pos=(0, 0, 200),
+    radius=50,
+    material_index=emissiveB
+)
 
-
-
-write_scene("city_ns.scene")
+write_scene("mountain.scene")
