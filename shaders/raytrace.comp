@@ -426,7 +426,7 @@ void main()
                 break;
             }
         }
-        float maxIntensity = 7.0;
+        float maxIntensity = 10.0;
         accumulatedLight = min(accumulatedLight, vec3(maxIntensity));
         frameColor += accumulatedLight;
     }
