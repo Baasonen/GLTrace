@@ -299,6 +299,7 @@ void main()
             {
                 vec3 hitPos = currentRo + currentRd * minT;
                 vec3 normal;
+                vec3 geometricNormal;
                 int materialIndex;
 
                 if (hitType == 1)
@@ -320,28 +321,25 @@ void main()
                     vec3 edge1 = v1 - v0;
                     vec3 edge2 = v2 - v0;
 
-                    vec3 geometricNormal = normalize(cross(edge1, edge2));
+                    geometricNormal = normalize(cross(edge1, edge2));
 
                     if (u_smoothShading == 1)
                     {
-                        vec3 v10 = v1 - v0;
-                        vec3 v20 = v2 - v0;
-                        vec3 vp0 = hitPos - v0;
+                        vec3 h = cross(currentRd, edge2);
+                        float a = dot(edge1, h);
 
-                        float d00 = dot(v10, v10);
-                        float d01 = dot(v10, v20);
-                        float d11 = dot(v20, v20);
-                        float d20 = dot(vp0, v10);
-                        float d21 = dot(vp0, v20);
-                        float denom = d00 * d11 - d01 * d01;
+                        float f = 1.0 / a;
+                        vec3 s = currentRo - v0;
+                        float u = f * dot(s, h);
 
-                        float vWeight = (d11 * d20 - d01 * d21) / denom;
-                        float wWeight = (d00 * d21 - d01 * d20) / denom;
-                        float uWeight = 1.0 - vWeight - wWeight;
+                        vec3 q = cross(s, edge1);
+                        float v = f * dot(currentRd, q);
 
-                        normal = normalize(vertices[i0].normal * uWeight + 
-                                            vertices[i1].normal * vWeight + 
-                                            vertices[i2].normal * wWeight);
+                        float w = 1.0 - u - v;
+
+                        normal = normalize(vertices[i0].normal * w +
+                                           vertices[i1].normal * u +
+                                           vertices[i2].normal * v);
                     }
                     else {normal = geometricNormal;}
                     
@@ -372,7 +370,7 @@ void main()
                 }
 
                 // Offset to prevent self intersection
-                currentRo = hitPos + normal * 0.001;
+                currentRo = hitPos + geometricNormal * 0.001;
 
                 if (bounce == 0 && s == 0) 
                 {
@@ -441,6 +439,7 @@ void main()
     float weight = 1.0 / float(u_frameCount);
     vec3 finalLinear = mix(prevColor, frameColor, weight);
 
+    //imageStore(img_output, pixelCoord, vec4(firstNormal.rgb, 1.0));
     imageStore(img_output, pixelCoord, vec4(finalLinear, firstRoughness));
     imageStore(img_normals, pixelCoord, firstNormal);
 }

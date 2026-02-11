@@ -1,9 +1,5 @@
 // Copyright (c) 2026 Henri Paasonen - GPLv2
 // See LICENSE for details
-
-// F: toggle denoise
-// N: toggle skybox
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
@@ -489,8 +485,6 @@ int main(int argc, char* argv[])
     {
         strncpy(scenePath, "scenes/1.scene", sizeof(scenePath));
     }
-
-    printf("%i", sizeof(GPUPackedVertex));
 
     printf("\nGLTrace, loading: %s\n\n", scenePath);
 
