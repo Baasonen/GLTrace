@@ -12,8 +12,8 @@
 #include "shader_structs.h"
 #include "obj_loader.h"
 #include "bvh.h"
-#include "matrix.h"
 #include "scene_loader.h"
+#include "bvec.h"
 
 #ifndef M_PI
 #define M_PI 3.1415
@@ -384,17 +384,18 @@ MeshData buildSceneMesh(SceneDescription* scene)
 
         MeshData* sourceMesh = &scene->meshSources[srcIndex];
 
-        Mat4 modelMatrix = transformMatrix(instance->pos, instance->scale, instance->rotation);
+        vec3 axisY = {.x = 0.0f, .y = 1.0f, .z = 0.0f};
+        mat4 modelMatrix = mat4Transform(instance->pos, axisY, instance->rotation.y, instance->scale);
 
         for (int v = 0; v < sourceMesh->vertexCount; v++)
         {
-            Vec4 localPos;
+            vec4 localPos;
             localPos.x = sourceMesh->vertices[v].x;
             localPos.y = sourceMesh->vertices[v].y;
             localPos.z = sourceMesh->vertices[v].z;
-            localPos.a = 1.0f;
+            localPos.w = 1.0f;
 
-            Vec4 worldPos = matrixMultiplyVec4(modelMatrix, localPos);
+            vec4 worldPos = mat4MulVec4(modelMatrix, localPos);
 
             combinedMesh.vertices[vOffset + v].x = worldPos.x;
             combinedMesh.vertices[vOffset + v].y = worldPos.y;
@@ -583,19 +584,19 @@ int main(int argc, char* argv[])
         if (cameraMoved) {g_frameCount = 0;}
         g_frameCount++;
 
-        Vec4 forward = {0.0f, 0.0f, 0.0f, 0.0f};
+        vec3 forward = vec3Zero();
 
         forward.x = cos(radians(g_camera.yaw)) * cos(radians(g_camera.pitch));
         forward.y = sin(radians(g_camera.pitch));
         forward.z = sin(radians(g_camera.yaw)) * cos(radians(g_camera.pitch));
-        normalize(&forward);
+        forward = vec3Normalize(forward);
 
-        Vec4 up = {0.0f, 1.0f, 0.0f, 0.0f};
-        Vec4 right = crossProduct(forward, up);
-        normalize(&right);
+        vec3 up = {.x = 0.0f, .y = 1.0f, .z = 0.0f};
+        vec3 right = vec3Cross(forward, up);
+        right = vec3Normalize(right);
 
-        Vec4 trueUp = crossProduct(right, forward);
-        normalize(&trueUp);
+        vec3 trueUp = vec3Cross(right, forward);
+        trueUp = vec3Normalize(trueUp);
 
         glUseProgram(computeProgram);
 

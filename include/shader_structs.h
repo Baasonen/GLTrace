@@ -2,7 +2,7 @@
 #define SHADER_STRUCTS_H
 
 #include "obj_loader.h"
-#include "matrix.h"
+#include "bvec.h"
 
 typedef struct 
 {
@@ -31,9 +31,9 @@ typedef struct
 
 typedef struct 
 {
-    Vec4 pos;
-    Vec4 scale;
-    Vec4 rotation;
+    vec3 pos;
+    vec3 scale;
+    vec3 rotation;
     int materialIndex;
     int meshSourceIndex;
 } MeshInstance;

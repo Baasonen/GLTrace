@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <float.h>
-#include "matrix.h"
+#include "bvec.h"
 
 void freeMeshData(MeshData* mesh)
 {
@@ -37,10 +37,10 @@ void calculateMeshNormals(MeshData* mesh)
         GPUPackedVertex* v1 = &mesh->vertices[i1];
         GPUPackedVertex* v2 = &mesh->vertices[i2];
 
-        Vec4 e1 = {v1->x - v0->x, v1->y - v0->y, v1->z - v0->z, 0.0f};
-        Vec4 e2 = {v2->x - v0->x, v2->y - v0->y, v2->z - v0->z, 0.0f};
+        vec3 e1 = {{v1->x - v0->x, v1->y - v0->y, v1->z - v0->z}};
+        vec3 e2 = {{v2->x - v0->x, v2->y - v0->y, v2->z - v0->z}};
 
-        Vec4 normal = crossProduct(e1, e2);
+        vec3 normal = vec3Cross(e1, e2);
 
         v0->nx += normal.x; v0->ny += normal.y; v0->nz += normal.z;
         v1->nx += normal.x; v1->ny += normal.y; v1->nz += normal.z;
@@ -49,14 +49,13 @@ void calculateMeshNormals(MeshData* mesh)
 
     for (int i = 0; i < mesh->vertexCount; i++)
     {
-        Vec4 normal;
+        vec3 normal;
 
         normal.x = mesh->vertices[i].nx;
         normal.y = mesh->vertices[i].ny;
         normal.z = mesh->vertices[i].nz;
-        normal.a = 0.0f;
 
-        normalize(&normal);
+        normal = vec3Normalize(normal);
 
         mesh->vertices[i].nx = normal.x;
         mesh->vertices[i].ny = normal.y;

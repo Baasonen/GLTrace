@@ -141,10 +141,6 @@ int loadScene(const char* scenePath, SceneDescription* scene)
             fclose(file);
             return 0;
         }
-
-        inst->pos.a = 1.0f;
-        inst->scale.a = 1.0f;
-        inst->rotation.a = 1.0f;
     }
 
     if (fscanf(file, "%d", &scene->sphereCount) != 1)
