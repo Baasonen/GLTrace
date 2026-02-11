@@ -21,6 +21,7 @@ Path tracer written in **C** using **OpenGL 4.6** with support for meshes with *
 |:---|:---:|
 |N|Sky color|
 |F|Denoise|
+|G|Smooth Shading|
 |L|Lock camera|
 |W/A/S/D|Move camera|
 |Space / LCTRL|Move camera (Z)|
