@@ -45,6 +45,7 @@ float g_cameraSpeed = 100.0f;
 bool g_cameraLock = false;
 int g_isDay = 1;
 bool g_enableDenoise = true;
+bool g_smoothShading = false;
 
 float g_lastFrame = 0.0f;
 float g_deltaTime = 0.0f;
@@ -180,6 +181,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     if (key == GLFW_KEY_F && action == GLFW_PRESS)
     {
         g_enableDenoise = !g_enableDenoise;
+    }
+
+    if (key == GLFW_KEY_G && action == GLFW_PRESS)
+    {
+        g_smoothShading = !g_smoothShading;
+        g_frameCount = 0;
     }
 }
 
@@ -415,6 +422,8 @@ MeshData buildSceneMesh(SceneDescription* scene)
 
     combinedMesh.triangleCount = totalIndices / 3;
 
+    calculateMeshNormals(&combinedMesh);
+
     return combinedMesh;
 }
 
@@ -480,6 +489,8 @@ int main(int argc, char* argv[])
     {
         strncpy(scenePath, "scenes/1.scene", sizeof(scenePath));
     }
+
+    printf("%i", sizeof(GPUPackedVertex));
 
     printf("\nGLTrace, loading: %s\n\n", scenePath);
 
@@ -594,6 +605,7 @@ int main(int argc, char* argv[])
 
         glUseProgram(computeProgram);
 
+        glUniform1i(glGetUniformLocation(computeProgram, "u_smoothShading"), g_smoothShading);
         glUniform1i(glGetUniformLocation(computeProgram, "u_isDay"), g_isDay);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camForward"), forward.x, forward.y, forward.z);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camRight"), right.x, right.y, right.z);

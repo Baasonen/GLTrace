@@ -15,6 +15,8 @@ typedef struct
 
 void normalize(Vec4* v);
 
+Vec4 vec4Sub(Vec4* a, Vec4* b);
+
 Vec4 crossProduct(Vec4 a, Vec4 b);
 
 Mat4 mat4Multiply(Mat4 a, Mat4 b);

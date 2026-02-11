@@ -15,7 +15,7 @@ CFLAGS := -I$(INC_DIR) -I$(GLFW_INC) -Wall -MMD -MP -O2
 LDFLAGS := -L$(GLFW_LIB)
 LIBS := -lglfw3 -lopengl32 -lgdi32
 
-all: $(TARGET)
+all: clean $(TARGET)
 
 $(TARGET): $(OBJ)
 	$(CC) $^ $(LDFLAGS) $(LIBS) -o $@
@@ -30,5 +30,6 @@ $(BUILD_DIR):
 
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET)
+
 
 .PHONY: all clean

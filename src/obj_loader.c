@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <float.h>
+#include "matrix.h"
 
 void freeMeshData(MeshData* mesh)
 {
@@ -14,6 +15,54 @@ void freeMeshData(MeshData* mesh)
     mesh->indices = NULL;
     mesh->vertexCount = 0;
     mesh->indexCount = 0;
+}
+
+void calculateMeshNormals(MeshData* mesh)
+{
+    for (int i = 0; i < mesh->vertexCount; i++)
+    {
+        mesh->vertices[i].nx = 0.0f;
+        mesh->vertices[i].ny = 0.0f;
+        mesh->vertices[i].nz = 0.0f;
+        mesh->vertices[i].padding2 = 0.0f;
+    }
+
+    for (int i = 0; i < mesh->indexCount; i += 3)
+    {
+        uint32_t i0 = mesh->indices[i + 0];
+        uint32_t i1 = mesh->indices[i + 1];
+        uint32_t i2 = mesh->indices[i + 2];
+
+        GPUPackedVertex* v0 = &mesh->vertices[i0];
+        GPUPackedVertex* v1 = &mesh->vertices[i1];
+        GPUPackedVertex* v2 = &mesh->vertices[i2];
+
+        Vec4 e1 = {v1->x - v0->x, v1->y - v0->y, v1->z - v0->z, 0.0f};
+        Vec4 e2 = {v2->x - v0->x, v2->y - v0->y, v2->z - v0->z, 0.0f};
+
+        Vec4 normal = crossProduct(e1, e2);
+
+        v0->nx += normal.x; v0->ny += normal.y; v0->nz += normal.z;
+        v1->nx += normal.x; v1->ny += normal.y; v1->nz += normal.z;
+        v2->nx += normal.x; v2->ny += normal.y; v2->nz += normal.z;
+    }
+
+    for (int i = 0; i < mesh->vertexCount; i++)
+    {
+        Vec4 normal;
+
+        normal.x = mesh->vertices[i].nx;
+        normal.y = mesh->vertices[i].ny;
+        normal.z = mesh->vertices[i].nz;
+        normal.a = 0.0f;
+
+        normalize(&normal);
+
+        mesh->vertices[i].nx = normal.x;
+        mesh->vertices[i].ny = normal.y;
+        mesh->vertices[i].nz = normal.z;
+    }
+    printf("\nBuilt normals for %i vertices\n", mesh->vertexCount);
 }
 
 int loadObj(const char* filename, MeshData* mesh)
@@ -95,7 +144,7 @@ int loadObj(const char* filename, MeshData* mesh)
             mesh->vertices[vPtr].x = x;
             mesh->vertices[vPtr].y = y;
             mesh->vertices[vPtr].z = z;
-            mesh->vertices[vPtr].padding = 1.0f;
+            mesh->vertices[vPtr].padding = 0.0f;
 
             // Update bounding box
             if (x < mesh->minBounds[0]) {mesh->minBounds[0] = x;}

@@ -7,6 +7,8 @@ typedef struct
 {
     float x, y, z;
     float padding;
+    float nx, ny, nz;
+    float padding2;
 } GPUPackedVertex;
 
 typedef struct 
@@ -23,6 +25,8 @@ typedef struct
 
     uint32_t* triangleMaterials;
 } MeshData;
+
+void calculateMeshNormals(MeshData* mesh);
 
 int loadObj(const char* filename, MeshData* mesh);
 

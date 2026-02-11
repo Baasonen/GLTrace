@@ -1,5 +1,18 @@
 #include "matrix.h"
 
+Vec4 comToVec(float* a, float* b, float* c)
+{
+    Vec4 result = {*a, *b, *c, 0.0f};
+    return result;
+}
+
+void vecToCom(Vec4 vec, float* a, float* b, float*c)
+{
+    *a = vec.x;
+    *b = vec.y;
+    *c = vec.z;
+}
+
 void normalize(Vec4* v)
 {
     float sqrSum = (v->x) * (v->x) + (v->y) * (v->y) + (v->z) * (v->z);
@@ -8,6 +21,18 @@ void normalize(Vec4* v)
     v->x /= length;
     v->y /= length;
     v->z /= length;
+}
+
+Vec4 vec4Sub(Vec4* a, Vec4* b)
+{
+    Vec4 result;
+
+    result.x = a->x - b->x;
+    result.y = a->y - b->y;
+    result.z = a->z - b->z;
+    result.a = 0.0f;
+
+    return result;
 }
 
 Vec4 crossProduct(Vec4 a, Vec4 b)
