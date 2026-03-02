@@ -1,5 +1,6 @@
 # GLTrace
-<img width="3439" height="1408" alt="image" src="https://github.com/user-attachments/assets/565f653d-d4b2-4dc0-9757-80e1d65464e4" />
+<img width="1551" height="934" alt="image" src="https://github.com/user-attachments/assets/5eda40f0-de76-42a0-9089-f0aebf586dd2" />
+
 
 ***
 Path tracer written in **C** using **OpenGL 4.6** with support for meshes with **SAH BVH acceleration** and a **PBR** material system.
