@@ -35,7 +35,6 @@ void main()
     float sNormal = 128.0;
     float sColor = 2.0;
 
-    // 5x5 B3-Spline approx.
     float kernel[5] = float[](1.0 / 16.0, 1.0 / 4.0, 3.0 / 8.0, 1.0 / 4.0, 1.0 / 16.0);
 
     int radius = int(mix(1.0, 2.0, centerRoughness));
@@ -68,7 +67,7 @@ void main()
 
             float lumCenter = dot(centerCol, vec3(0.299, 0.587, 0.114));
             float lumNeighbor = dot(neighborCol, vec3(0.299, 0.587, 0.114));
-            float lumDiff = abs(lumCenter - lumNeighbor);
+            float lumDiff = abs(lumCenter - lumNeighbor) * 0.3;
 
             float colorWeight = exp(-lumDiff * 8.0);
 

@@ -42,6 +42,8 @@ bool g_cameraLock = false;
 int g_isDay = 1;
 bool g_enableDenoise = true;
 bool g_smoothShading = false;
+bool g_debugMode = false;
+bool g_renderBothSides = false;
 
 float g_lastFrame = 0.0f;
 float g_deltaTime = 0.0f;
@@ -182,6 +184,18 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     if (key == GLFW_KEY_G && action == GLFW_PRESS)
     {
         g_smoothShading = !g_smoothShading;
+        g_frameCount = 0;
+    }
+
+    if (key == GLFW_KEY_P && action == GLFW_PRESS)
+    {
+        g_debugMode = !g_debugMode;
+        g_frameCount = 0;
+    }
+
+    if (key == GLFW_KEY_H && action == GLFW_PRESS)
+    {
+        g_renderBothSides = !g_renderBothSides;
         g_frameCount = 0;
     }
 }
@@ -600,6 +614,8 @@ int main(int argc, char* argv[])
 
         glUseProgram(computeProgram);
 
+        glUniform1i(glGetUniformLocation(computeProgram, "u_renderBothSides"), g_renderBothSides);
+        glUniform1i(glGetUniformLocation(computeProgram, "u_debugMode"), g_debugMode);
         glUniform1i(glGetUniformLocation(computeProgram, "u_smoothShading"), g_smoothShading);
         glUniform1i(glGetUniformLocation(computeProgram, "u_isDay"), g_isDay);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camForward"), forward.x, forward.y, forward.z);
@@ -633,7 +649,7 @@ int main(int argc, char* argv[])
         GLuint readTex = g_outputTexture;
         GLuint writeTex = g_denoisedTexture;
 
-        int denoisePasses = 3;
+        int denoisePasses = 4;
 
         if (g_enableDenoise)
         {

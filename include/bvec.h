@@ -5,6 +5,10 @@
 
 #include <math.h>
 
+#ifndef M_PI
+#define M_PI 3.1415
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-braces"
@@ -152,6 +156,27 @@ static inline float vec3Length(const vec3 v)
 static inline float vec4Length(const vec4 v)
 {
     return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
+}
+
+static inline float vec2Angle(vec2 v, vec2 u)
+{
+    double theta = (vec2Dot(v, u) / (vec2Length(v) * vec2Length(u)));
+
+    return acos(theta);
+}
+
+static inline float vec3Angle(const vec3 v, const vec3 u)
+{
+    double theta =  (vec3Dot(v, u) / (vec3Length(v) * vec3Length(u)));
+
+    return acos(theta);
+}
+
+static inline float vec4Angle(const vec4 v, const vec4 u)
+{
+    double theta = (vec4Dot(v, u) / (vec4Length(v) * vec4Length(u)));
+
+    return acos(theta);
 }
 
 static inline float vec2LengthSq(const vec2 v)
