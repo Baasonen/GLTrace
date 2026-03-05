@@ -44,6 +44,7 @@ bool g_enableDenoise = true;
 bool g_smoothShading = false;
 bool g_debugMode = false;
 bool g_renderBothSides = false;
+bool g_adaptiveDenoising = false;
 
 float g_lastFrame = 0.0f;
 float g_deltaTime = 0.0f;
@@ -185,6 +186,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     {
         g_smoothShading = !g_smoothShading;
         g_frameCount = 0;
+        printf("Smooth shading: %s\n", g_smoothShading ? "Enabled" : "disabled");
     }
 
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
@@ -197,6 +199,13 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     {
         g_renderBothSides = !g_renderBothSides;
         g_frameCount = 0;
+        printf("Double sided rendering: %s\n", g_renderBothSides ? "Enabled" : "disabled");
+    }
+
+    if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+    {
+        g_adaptiveDenoising = !g_adaptiveDenoising;
+        printf("Adaptive denoising: %s\n", g_adaptiveDenoising ? "Enabled" : "Disabled");
     }
 }
 
@@ -649,7 +658,24 @@ int main(int argc, char* argv[])
         GLuint readTex = g_outputTexture;
         GLuint writeTex = g_denoisedTexture;
 
-        int denoisePasses = 4;
+        int denoisePasses = 0;
+
+        if (g_adaptiveDenoising)
+        {
+            const int maxPasses = 10;
+
+            float t = (float)g_frameCount / 3000.0f;
+
+            if (t < 0.0f) {t = 0.0f;}
+            if (t > 1.0f) {t = 1.0f;}
+
+            float falloff = 1.0f - sqrt(t);
+
+            denoisePasses = (int)roundf(maxPasses * falloff);
+            if (denoisePasses < 3) {denoisePasses = 3;}
+        }
+
+        else {denoisePasses = 3;}
 
         if (g_enableDenoise)
         {
