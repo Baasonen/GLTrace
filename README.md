@@ -3,16 +3,12 @@
 
 
 ***
-Path tracer written in **C** using **OpenGL 4.6** with support for meshes with **SAH BVH acceleration** and a **PBR** material system.
+Path tracer written in **C** using **OpenGL 4.6** with support for meshes with SAH BVH acceleration and a PBR material system.
 *** 
-### Build Requirements
 
-- OpenGL 4.6
-- GLFW
-- SDL3
 ***
 ### Running
-- Makefile included
+- Makefile and dependencies included
 - Scene to load given as argument (default 1.scene)
 
 ***NOTE: Vsync disabled by default to increase throughput***
