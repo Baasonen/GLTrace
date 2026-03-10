@@ -1,23 +1,25 @@
 // Copyright (c) 2026 Henri Paasonen - GPLv2
 // See LICENSE for details
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include <glfw/glfw3.h>
+#include <bvec/bvec.h>
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 
+#include "math_utils.h"
 #include "file_util.h"
 #include "shader_structs.h"
 #include "obj_loader.h"
 #include "bvh.h"
 #include "scene_loader.h"
-#include "bvec.h"
-
-#ifndef M_PI
-#define M_PI 3.1415
-#endif
+#include "camera.h"
+#include "state.h"
+#include "config.h"
+#include "input.h"
 
 #ifdef _WIN32
 __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
@@ -25,188 +27,15 @@ __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
 
-float radians(float deg) {return deg * (M_PI / 180.0f);}
 
-#define WIDTH 1920
-#define HEIGHT 1080
 
-bool g_firstMouse = true;
-float g_lastX = WIDTH / 2.0f;
-float g_lastY = HEIGHT / 2.0f;
-float g_mouseSensitivity = 0.1f;
-
-int g_frameCount = 0;
-Camera g_camera = {0.0f, 0.0f, 200.0f, -90.0f, 0.0f, 1.0f};
-float g_cameraSpeed = 100.0f;
-bool g_cameraLock = false;
-int g_isDay = 1;
-bool g_enableDenoise = true;
-bool g_smoothShading = false;
-bool g_debugMode = false;
-bool g_renderBothSides = false;
-bool g_adaptiveDenoising = false;
-
-float g_lastFrame = 0.0f;
-float g_deltaTime = 0.0f;
-
-bool g_framebufferResized = false;
-int g_newWidth = WIDTH;
-int g_newHeight = HEIGHT;
-
-void calculateCameraVectors(Camera* camera, float* forwardX, float* forwardZ, float* rightX, float* rightZ)
-{
-    float yawRads = radians(camera -> yaw);
-
-    *forwardX = cos(yawRads);
-    *forwardZ = sin(yawRads);
-
-    *rightX = cos(yawRads + radians(90.0f));
-    *rightZ = sin(yawRads + radians(90.0f));
-}
-
-bool processInput(GLFWwindow* window)
-{
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-    {
-        glfwSetWindowShouldClose(window, true);
-    }
-
-    if (g_cameraLock) {return false;}
-
-    bool moved = false;
-    float cameraVelocity = g_cameraSpeed * g_deltaTime;
-
-    float forwardX, forwardZ, rightX, rightZ;
-    calculateCameraVectors(&g_camera, &forwardX, &forwardZ, &rightX, &rightZ);
-
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-    {
-        g_camera.x += forwardX * cameraVelocity;
-        g_camera.z += forwardZ * cameraVelocity;
-        moved = true;
-    }
-
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-    {
-        g_camera.x -= forwardX * cameraVelocity;
-        g_camera.z -= forwardZ * cameraVelocity;
-        moved = true;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-    {
-        g_camera.x -= rightX * cameraVelocity;
-        g_camera.z -= rightZ * cameraVelocity;
-        moved = true;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-    {
-        g_camera.x += rightX * cameraVelocity;
-        g_camera.z += rightZ * cameraVelocity;
-        moved = true;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-    {
-        g_camera.y += cameraVelocity;
-        moved = true;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-    {
-        g_camera.y -= cameraVelocity;
-        moved = true;
-    }
-
-    return moved;
-}
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
-    g_newWidth = width;
-    g_newHeight = height;
-    g_framebufferResized = true;
-}
-
-void mouseCallback(GLFWwindow* window, double xpos, double ypos)
-{
-    if (g_cameraLock) {return;}
-
-    if (g_firstMouse)
-    {
-        g_lastX = (float)xpos;
-        g_lastY = (float)ypos;
-        g_firstMouse = false;
-        return;
-    }
-
-    float xOffset = (float)xpos - g_lastX;
-    float yOffset = g_lastY - (float)ypos;
-    g_lastX = (float)xpos;
-    g_lastY = (float)ypos;
-    
-    xOffset *= g_mouseSensitivity;
-    yOffset *= g_mouseSensitivity;
-
-    g_camera.yaw += xOffset;
-    g_camera.pitch += yOffset;
-
-    if (g_camera.pitch > 89.0f) {g_camera.pitch = 89.0f;}
-    if (g_camera.pitch < -89.0f) {g_camera.pitch = -89.0f;}
-
-    g_frameCount = 0;
-}
-
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    // Day / Night
-    if (key == GLFW_KEY_N && action == GLFW_PRESS)
-    {
-        g_isDay++;
-
-        if (g_isDay > 2) {g_isDay = 0;}
-
-        g_frameCount = 0;
-    }
-
-    // Camera lock
-    if (key == GLFW_KEY_L && action == GLFW_PRESS)
-    {
-        g_cameraLock = !g_cameraLock;
-    }
-
-    if (key == GLFW_KEY_F && action == GLFW_PRESS)
-    {
-        g_enableDenoise = !g_enableDenoise;
-    }
-
-    if (key == GLFW_KEY_G && action == GLFW_PRESS)
-    {
-        g_smoothShading = !g_smoothShading;
-        g_frameCount = 0;
-        printf("Smooth shading: %s\n", g_smoothShading ? "Enabled" : "disabled");
-    }
-
-    if (key == GLFW_KEY_P && action == GLFW_PRESS)
-    {
-        g_debugMode = !g_debugMode;
-        g_frameCount = 0;
-    }
-
-    if (key == GLFW_KEY_H && action == GLFW_PRESS)
-    {
-        g_renderBothSides = !g_renderBothSides;
-        g_frameCount = 0;
-        printf("Double sided rendering: %s\n", g_renderBothSides ? "Enabled" : "disabled");
-    }
-
-    if (key == GLFW_KEY_1 && action == GLFW_PRESS)
-    {
-        g_adaptiveDenoising = !g_adaptiveDenoising;
-        printf("Adaptive denoising: %s\n", g_adaptiveDenoising ? "Enabled" : "Disabled");
-    }
+    g_program.newWidth = width;
+    g_program.newHeight = height;
+    g_program.framebufferResized = true;
 }
 
 GLuint compileShader(const char* filename, GLenum type)
@@ -523,7 +352,7 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "GLTrace", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "GLTrace", NULL, NULL);
     if (!window)
     {
         fprintf(stderr, "GLFW window creation failed\n");
@@ -584,34 +413,34 @@ int main(int argc, char* argv[])
     GLuint displayProgram = createShaderProgram();
     GLuint denoiseProgram = createComputeProgram("shaders/denoise.comp");
 
-    setupTextures(WIDTH, HEIGHT);
+    setupTextures(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
         float currentFrame = (float)glfwGetTime();
-        g_deltaTime = currentFrame - g_lastFrame;
-        g_lastFrame = currentFrame;
+        g_program.deltaTime = currentFrame - g_program.lastFrame;
+        g_program.lastFrame = currentFrame;
 
         //printf("%f, %f, %f\n", g_camera.x, g_camera.y, g_camera.z);
 
-        if (g_framebufferResized)
+        if (g_program.framebufferResized)
         {
-            setupTextures(g_newWidth, g_newHeight);
+            setupTextures(g_program.newWidth, g_program.newHeight);
 
-            g_frameCount = 0;
-            g_framebufferResized = false;
+            g_program.frameCount = 0;
+            g_program.framebufferResized = false;
         }
 
         bool cameraMoved = processInput(window);
-        if (cameraMoved) {g_frameCount = 0;}
-        g_frameCount++;
+        if (cameraMoved) {g_program.frameCount = 0;}
+        g_program.frameCount++;
 
         vec3 forward = vec3Zero();
 
-        forward.x = cos(radians(g_camera.yaw)) * cos(radians(g_camera.pitch));
-        forward.y = sin(radians(g_camera.pitch));
-        forward.z = sin(radians(g_camera.yaw)) * cos(radians(g_camera.pitch));
+        forward.x = cos(radians(g_program.camera.yaw)) * cos(radians(g_program.camera.pitch));
+        forward.y = sin(radians(g_program.camera.pitch));
+        forward.z = sin(radians(g_program.camera.yaw)) * cos(radians(g_program.camera.pitch));
         forward = vec3Normalize(forward);
 
         vec3 up = {.x = 0.0f, .y = 1.0f, .z = 0.0f};
@@ -623,22 +452,22 @@ int main(int argc, char* argv[])
 
         glUseProgram(computeProgram);
 
-        glUniform1i(glGetUniformLocation(computeProgram, "u_renderBothSides"), g_renderBothSides);
-        glUniform1i(glGetUniformLocation(computeProgram, "u_debugMode"), g_debugMode);
-        glUniform1i(glGetUniformLocation(computeProgram, "u_smoothShading"), g_smoothShading);
-        glUniform1i(glGetUniformLocation(computeProgram, "u_isDay"), g_isDay);
+        glUniform1i(glGetUniformLocation(computeProgram, "u_renderBothSides"), g_program.renderBothSides);
+        glUniform1i(glGetUniformLocation(computeProgram, "u_debugMode"), g_program.debugmode);
+        glUniform1i(glGetUniformLocation(computeProgram, "u_smoothShading"), g_program.smoothShading);
+        glUniform1i(glGetUniformLocation(computeProgram, "u_isDay"), g_program.isDay);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camForward"), forward.x, forward.y, forward.z);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camRight"), right.x, right.y, right.z);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camUp"), trueUp.x, trueUp.y, trueUp.z);
-        glUniform2f(glGetUniformLocation(computeProgram, "u_resolution"), (float)g_newWidth, (float)g_newHeight);
+        glUniform2f(glGetUniformLocation(computeProgram, "u_resolution"), (float)g_program.newWidth, (float)g_program.newHeight);
 
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_accumTexture, 0);
 
-        glUniform1i(glGetUniformLocation(computeProgram, "u_frameCount"), g_frameCount);
+        glUniform1i(glGetUniformLocation(computeProgram, "u_frameCount"), g_program.frameCount);
         glUniform1i(glGetUniformLocation(computeProgram, "u_historyTexture"), 0);
-        glUniform3f(glGetUniformLocation(computeProgram, "u_cameraPos"), g_camera.x, g_camera.y, g_camera.z);
-        glUniform1f(glGetUniformLocation(computeProgram, "u_cameraYaw"), g_camera.yaw);
-        glUniform1f(glGetUniformLocation(computeProgram, "u_cameraPitch"), g_camera.pitch);
+        glUniform3f(glGetUniformLocation(computeProgram, "u_cameraPos"), g_program.camera.x, g_program.camera.y, g_program.camera.z);
+        glUniform1f(glGetUniformLocation(computeProgram, "u_cameraYaw"), g_program.camera.yaw);
+        glUniform1f(glGetUniformLocation(computeProgram, "u_cameraPitch"), g_program.camera.pitch);
 
         glActiveTexture(GL_TEXTURE0);
 
@@ -648,23 +477,23 @@ int main(int argc, char* argv[])
         // RT 
         glBindImageTexture(0, g_outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glBindImageTexture(1, g_normalTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        glDispatchCompute((g_newWidth + 15) / 16, (g_newHeight + 15) / 16, 1);
+        glDispatchCompute((g_program.newWidth + 15) / 16, (g_program.newHeight + 15) / 16, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
         // Denoiser
         glUseProgram(denoiseProgram);
-        glUniform2f(glGetUniformLocation(denoiseProgram, "u_resolution"), (float)g_newWidth, (float)g_newHeight);
+        glUniform2f(glGetUniformLocation(denoiseProgram, "u_resolution"), (float)g_program.newWidth, (float)g_program.newHeight);
 
         GLuint readTex = g_outputTexture;
         GLuint writeTex = g_denoisedTexture;
 
         int denoisePasses = 0;
 
-        if (g_adaptiveDenoising)
+        if (g_program.adaptiveDenoising)
         {
             const int maxPasses = 10;
 
-            float t = (float)g_frameCount / 3000.0f;
+            float t = (float)g_program.frameCount / 3000.0f;
 
             if (t < 0.0f) {t = 0.0f;}
             if (t > 1.0f) {t = 1.0f;}
@@ -677,7 +506,7 @@ int main(int argc, char* argv[])
 
         else {denoisePasses = 3;}
 
-        if (g_enableDenoise)
+        if (g_program.enableDenoise)
         {
             for (int i = 0; i < denoisePasses; i++)
             {
@@ -687,7 +516,7 @@ int main(int argc, char* argv[])
                 glBindImageTexture(1, g_normalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
                 glBindImageTexture(2, writeTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
-                glDispatchCompute((g_newWidth + 15) / 16, (g_newHeight + 15) / 16, 1);
+                glDispatchCompute((g_program.newWidth + 15) / 16, (g_program.newHeight + 15) / 16, 1);
                 glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
                 readTex = writeTex;
@@ -697,7 +526,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        glViewport(0, 0, g_newWidth, g_newHeight);
+        glViewport(0, 0, g_program.newWidth, g_program.newHeight);
         glClear(GL_COLOR_BUFFER_BIT); // Clear default framebuffer
 
         glUseProgram(displayProgram);

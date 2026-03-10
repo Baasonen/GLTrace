@@ -1,15 +1,9 @@
 #ifndef SHADER_STRUCTS_H
 #define SHADER_STRUCTS_H
 
-#include "obj_loader.h"
-#include "bvec.h"
+#include <bvec/bvec.h>
 
-typedef struct 
-{
-    float x, y, z;
-    float yaw, pitch;
-    float focalLength;
-} Camera;
+#include "obj_loader.h"
 
 typedef struct 
 {

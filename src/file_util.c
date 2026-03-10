@@ -17,7 +17,7 @@ char* readFileToString(const char* filename)
     long length = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    char* buffer = (char*)malloc(length + 1);  // file content + null terminator
+    char* buffer = (char*)malloc(length + 1); 
 
     if (buffer == NULL)
     {

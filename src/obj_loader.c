@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <float.h>
-#include "bvec.h"
+#include <bvec/bvec.h>
 
 void freeMeshData(MeshData* mesh)
 {
