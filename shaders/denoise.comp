@@ -35,7 +35,7 @@ void main()
     float sNormal = 128.0;
     float sColor = 35.0;
 
-    int radius = int(mix(1.0, 2.0, centerRoughness));
+    int radius = int(round(mix(1.0, 2.0, centerRoughness)));
 
     for (int x = -radius; x <= radius; x++)
     {
