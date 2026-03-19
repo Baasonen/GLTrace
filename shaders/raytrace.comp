@@ -330,25 +330,70 @@ void main()
                     // Flip normal if hit back face
                     if (dot(geometricNormal, currentRd) > 0.0) {normal = -normal;}
                 }
+                
                 Material material = materials[materialIndex];
-
                 accumulatedLight += material.color.rgb * material.emission * throughput;
 
-                // Simple Schlik Fresnel approx
-                float fresnel = 0.04 + (1.0 - 0.04) * pow(1.0 - max(dot(normal, -currentRd), 0.0), 5.0);
-                bool isSpecular = random(sampleSeed) < mix(fresnel, 1.0, material.metallic);
+                vec3 refNormal = (hitType == 2) ? geometricNormal : normal;
+                bool isInside = dot(refNormal, currentRd) > 0.0;
 
-                if (isSpecular)
+                if(isInside) 
                 {
-                    vec3 reflectDir = reflect(currentRd, normal);
-                    
-                    currentRd = normalize(mix(reflectDir, cosHemisphere(normal, sampleSeed), material.roughness * material.roughness));
-                    throughput *= mix(vec3(1.0, 1.0, 1.0), material.color.rgb, material.metallic);
+                    normal = -normal;
+
+                    vec3 absoption = (vec3(1.0) - material.color.rgb) * 2.0;
+                    throughput *= exp(-absoption * minT);
+                }
+
+                if (random(sampleSeed) > material.opacity)
+                {
+                    float refIdx = 1.6;
+
+                    float eta = isInside ? refIdx : (1 / refIdx);
+
+                    float f0 = (1 - refIdx) / (1 + refIdx);
+                    float r0 = f0 * f0;
+                    float rTheta = r0 + (1 - r0) * pow(1 - max(dot(normal, -currentRd), 0.0), 5.0);
+
+                    if (rTheta > random(sampleSeed))
+                    {
+                        currentRd = reflect(currentRd, normal);
+                        currentRo = hitPos + normal * 0.001;
+                    }
+                    else
+                    {
+                        vec3 refractDir = refract(currentRd, normal, eta);
+
+                        if (length(refractDir) < 0.001)
+                        {
+                            currentRd = reflect(currentRd, normal);
+                            currentRo = hitPos + normal * 0.001;
+                        }
+                        else
+                        {
+                            currentRd = normalize(mix(refractDir, cosHemisphere(-normal, sampleSeed), material.roughness * material.roughness));
+                            currentRo = hitPos - normal * 0.001;
+                        }
+                    }
                 }
                 else
                 {
-                    currentRd = cosHemisphere(normal, sampleSeed);
-                    throughput *= material.color.rgb;
+                    // Simple Schlik Fresnel approx
+                    float fresnel = 0.04 + (1.0 - 0.04) * pow(1.0 - max(dot(normal, -currentRd), 0.0), 5.0);
+                    bool isSpecular = random(sampleSeed) < mix(fresnel, 1.0, material.metallic);
+
+                    if (isSpecular)
+                    {
+                        vec3 reflectDir = reflect(currentRd, normal);
+
+                        currentRd = normalize(mix(reflectDir, cosHemisphere(normal, sampleSeed), material.roughness * material.roughness));
+                        throughput *= mix(vec3(1.0, 1.0, 1.0), material.color.rgb, material.metallic);
+                    }
+                    else
+                    {
+                        currentRd = cosHemisphere(normal, sampleSeed);
+                        throughput *= material.color.rgb;
+                    }
                 }
 
                 // Offset to prevent self intersection
