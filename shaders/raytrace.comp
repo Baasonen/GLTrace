@@ -447,8 +447,8 @@ void main()
                 float nightFactor = smoothstep(0.0, -0.2, sunAlt);
                 float sunsetFactor = 1.0 - smoothstep(0.0, 0.15, abs(sunAlt));
 
-                vec3 dayTop = vec3(0.5, 0.7, 1.0);   vec3 dayMid = vec3(0.7, 0.8, 1.0);   vec3 dayBot = vec3(0.1, 0.1, 0.2);
-                vec3 setTop = vec3(0.05, 0.05, 0.15); vec3 setMid = vec3(0.9, 0.4, 0.2);   vec3 setBot = vec3(0.8, 0.2, 0.05);
+                vec3 dayTop = vec3(0.2, 0.4, 0.8);    vec3 dayMid = vec3(0.4, 0.6, 0.9);   vec3 dayBot = vec3(0.1, 0.1, 0.15);
+                vec3 setTop = vec3(0.02, 0.02, 0.1);  vec3 setMid = vec3(0.6, 0.2, 0.05);  vec3 setBot = vec3(0.2, 0.05, 0.0);
                 vec3 nightTop= vec3(0.01, 0.01, 0.05);vec3 nightMid = vec3(0.02, 0.02, 0.08);vec3 nightBot = vec3(0.0, 0.0, 0.02);
 
                 vec3 daySunColor = vec3(10.0, 8.0, 5.0);
@@ -465,15 +465,17 @@ void main()
                     smoothstep(0.0, 1.0, -t)
                 );
 
-                float horizonGlow = exp(-abs(t) * 8.0) * sunsetFactor;
-                skyColor += horizonGlow * vec3(1.0, 0.5, 0.2);
-
                 float sunDot = dot(currentRd, sunDir);
                 float sunDiameter = 0.9998;
 
+                float directionalGlow = max(sunDot, 0.0);
+                float horizonGlow = exp(-abs(t) * 5.0) * sunsetFactor * (0.1 + 0.9 * directionalGlow);
+
+                skyColor += horizonGlow * vec3(1.0, 0.5, 0.2);
+
                 if (sunDot > sunDiameter) 
                 { 
-                    skyColor += sunColor; 
+                    skyColor += sunColor * 2.0; 
                 } 
                 else if (sunDot > 0.0) 
                 {
@@ -481,11 +483,14 @@ void main()
                     skyColor += sunColor * halo * 0.1 * (1.0 - nightFactor); 
                 }
 
+                float skyIntensity = smoothstep(-0.2, 0.2, sunAlt); 
+                skyColor *= mix(0.4, 1.0, skyIntensity);
+
                 accumulatedLight += throughput * skyColor;
                 break;
             }
         }
-        float maxIntensity = 40.0;
+        float maxIntensity = 100.0;
         accumulatedLight = min(accumulatedLight, vec3(maxIntensity));
 
         if (u_debugMode == 0) {frameColor += accumulatedLight;}
