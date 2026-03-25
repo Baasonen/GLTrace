@@ -57,7 +57,7 @@ uniform sampler2D u_historyTexture;
 uniform vec3 u_cameraPos;
 uniform float u_cameraYaw;
 uniform float u_cameraPitch;
-uniform int u_isDay;
+uniform int u_timeOfDay;
 uniform int u_smoothShading;
 uniform int u_debugMode;
 uniform int u_renderBothSides;
@@ -422,51 +422,63 @@ void main()
                     firstNormal = vec4(normal * 0.5 + 0.5, minT);
                     firstRoughness = materials[materialIndex].roughness;    
                 }
-
-                // Russian roulette
-                float p = max(throughput.r, max(throughput.g, throughput.b));
-                p = min(p, 1.0);
-
-                if (random(sampleSeed) > p) {break;}
-                throughput /= p;
+                
+                if (bounce > 2)
+                {
+                    // Russian roulette
+                    float p = max(throughput.r, max(throughput.g, throughput.b));
+                    p = min(p, 1.0);
+    
+                    if (random(sampleSeed) > p) {break;}
+                    throughput /= p;
+                }
             }
             else
             {
-                vec3 skyColor = vec3(0.0, 0.0, 0.0);
+                vec3 skyColor = vec3(0.0);
+                float t = clamp(currentRd.y, -1.0, 1.0);
 
-                if (u_isDay == 0)
+                float sunAngle = (u_timeOfDay - 360.0) / 1440.0 * 6.283185;
+                vec3 sunDir = normalize(vec3(cos(sunAngle), sin(sunAngle), 0.2));
+
+                float sunAlt = sunDir.y;
+
+                float dayFactor = smoothstep(0.05, 0.3, sunAlt); 
+                float nightFactor = smoothstep(0.0, -0.2, sunAlt);
+                float sunsetFactor = 1.0 - smoothstep(0.0, 0.15, abs(sunAlt));
+
+                vec3 dayTop = vec3(0.5, 0.7, 1.0);   vec3 dayMid = vec3(0.7, 0.8, 1.0);   vec3 dayBot = vec3(0.1, 0.1, 0.2);
+                vec3 setTop = vec3(0.05, 0.05, 0.15); vec3 setMid = vec3(0.9, 0.4, 0.2);   vec3 setBot = vec3(0.8, 0.2, 0.05);
+                vec3 nightTop= vec3(0.01, 0.01, 0.05);vec3 nightMid = vec3(0.02, 0.02, 0.08);vec3 nightBot = vec3(0.0, 0.0, 0.02);
+
+                vec3 daySunColor = vec3(10.0, 8.0, 5.0);
+                vec3 setSunColor = vec3(30.0, 10.0, 2.0);
+
+                vec3 top    = mix(mix(setTop, nightTop, nightFactor), dayTop, dayFactor);
+                vec3 middle = mix(mix(setMid, nightMid, nightFactor), dayMid, dayFactor);
+                vec3 bottom = mix(mix(setBot, nightBot, nightFactor), dayBot, dayFactor);
+                vec3 sunColor = mix(mix(setSunColor, vec3(0.0), nightFactor), daySunColor, dayFactor);
+
+                skyColor = mix(
+                    mix(middle, top, smoothstep(0.0, 1.0, t)),
+                    bottom,
+                    smoothstep(0.0, 1.0, -t)
+                );
+
+                float horizonGlow = exp(-abs(t) * 8.0) * sunsetFactor;
+                skyColor += horizonGlow * vec3(1.0, 0.5, 0.2);
+
+                float sunDot = dot(currentRd, sunDir);
+                float sunDiameter = 0.9998;
+
+                if (sunDot > sunDiameter) 
+                { 
+                    skyColor += sunColor; 
+                } 
+                else if (sunDot > 0.0) 
                 {
-                    float t = clamp(currentRd.y, -1.0, 1.0);
-
-                    vec3 top    = vec3(0.5, 0.7, 1.0);
-                    vec3 middle = vec3(0.7, 0.8, 1.0);
-                    vec3 bottom = vec3(0.1, 0.1, 0.2);
-
-                    skyColor = mix
-                    (
-                        mix(middle, top, smoothstep(0.0, 1.0, t)),
-                        bottom,
-                        smoothstep(0.0, 1.0, -t)
-                    );
-                }
-
-                if (u_isDay == 2) // sunset
-                {
-                    float t = clamp(currentRd.y, -1.0, 1.0);
-
-                    vec3 top    = vec3(0.05, 0.05, 0.15); 
-                    vec3 middle = vec3(0.9, 0.4, 0.2); 
-                    vec3 bottom = vec3(0.8, 0.2, 0.05);  
-
-                    skyColor = mix(
-                        mix(middle, top, smoothstep(0.0, 1.0, t)),
-                        bottom,
-                        smoothstep(0.0, 1.0, -t)
-                    );
-
-                    // Extra glow near horizon
-                    float horizonGlow = exp(-abs(t) * 8.0);
-                    skyColor += horizonGlow * vec3(1.0, 0.5, 0.2);
+                    float halo = pow(sunDot, 256.0);
+                    skyColor += sunColor * halo * 0.1 * (1.0 - nightFactor); 
                 }
 
                 accumulatedLight += throughput * skyColor;

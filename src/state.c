@@ -22,7 +22,7 @@ State g_program = {
     .lastY = WINDOW_HEIGHT / 2.0f,
     .mouseSensitivity = 0.1f,
 
-    .isDay = 1,
+    .timeOfDay = 300,
     .enableDenoise = true,
     .adaptiveDenoising = false,
     .smoothShading = false,

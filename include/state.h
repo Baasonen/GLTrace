@@ -26,7 +26,7 @@ typedef struct
     float lastY;
     float mouseSensitivity;
 
-    int isDay;
+    int timeOfDay;
     bool enableDenoise;
     bool adaptiveDenoising;
     bool smoothShading;

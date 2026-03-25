@@ -142,7 +142,7 @@ int main(int argc, char* argv[])
         glUniform1i(glGetUniformLocation(computeProgram, "u_renderBothSides"), g_program.renderBothSides);
         glUniform1i(glGetUniformLocation(computeProgram, "u_debugMode"), g_program.debugmode);
         glUniform1i(glGetUniformLocation(computeProgram, "u_smoothShading"), g_program.smoothShading);
-        glUniform1i(glGetUniformLocation(computeProgram, "u_isDay"), g_program.isDay);
+        glUniform1i(glGetUniformLocation(computeProgram, "u_timeOfDay"), g_program.timeOfDay);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camForward"), forward.x, forward.y, forward.z);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camRight"), right.x, right.y, right.z);
         glUniform3f(glGetUniformLocation(computeProgram, "u_camUp"), trueUp.x, trueUp.y, trueUp.z);

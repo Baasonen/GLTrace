@@ -7,11 +7,21 @@
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     // Day / Night
-    if (key == GLFW_KEY_N && action == GLFW_PRESS)
+    if (key == GLFW_KEY_N && (action == GLFW_REPEAT | action == GLFW_PRESS))
     {
-        g_program.isDay++;
+        printf("%i\n", g_program.timeOfDay);
+        g_program.timeOfDay++;
 
-        if (g_program.isDay > 2) {g_program.isDay = 0;}
+        if (g_program.timeOfDay > 1440) {g_program.timeOfDay = 0;}
+
+        g_program.frameCount = 0;
+    }
+
+    if (key == GLFW_KEY_M && (action == GLFW_REPEAT | action == GLFW_PRESS))
+    {
+        g_program.timeOfDay--;
+
+        if (g_program.timeOfDay < 0) {g_program.timeOfDay = 1440;}
 
         g_program.frameCount = 0;
     }
