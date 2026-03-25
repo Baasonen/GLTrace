@@ -6,10 +6,8 @@
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    // Day / Night
-    if (key == GLFW_KEY_N && (action == GLFW_REPEAT | action == GLFW_PRESS))
+    if (key == GLFW_KEY_N && (action == GLFW_REPEAT || action == GLFW_PRESS))
     {
-        printf("%i\n", g_program.timeOfDay);
         g_program.timeOfDay++;
 
         if (g_program.timeOfDay > 1440) {g_program.timeOfDay = 0;}
@@ -17,7 +15,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         g_program.frameCount = 0;
     }
 
-    if (key == GLFW_KEY_M && (action == GLFW_REPEAT | action == GLFW_PRESS))
+    if (key == GLFW_KEY_M && (action == GLFW_REPEAT || action == GLFW_PRESS))
     {
         g_program.timeOfDay--;
 
@@ -26,7 +24,6 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         g_program.frameCount = 0;
     }
 
-    // Camera lock
     if (key == GLFW_KEY_L && action == GLFW_PRESS)
     {
         g_program.cameraLock = !g_program.cameraLock;

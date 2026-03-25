@@ -31,11 +31,11 @@ int main(int argc, char* argv[])
 
     if (argc > 1)
     {
-        snprintf(scenePath, sizeof(scenePath), "scenes/%s", argv[1]);
+        snprintf(scenePath, sizeof(scenePath), "scenes/%s.scene", argv[1]);
     }
     else
     {
-        strncpy(scenePath, "scenes/1.scene", sizeof(scenePath));
+        strncpy(scenePath, "scenes/default.scene", sizeof(scenePath));
     }
 
     printf("\nGLTrace, loading: %s\n\n", scenePath);
