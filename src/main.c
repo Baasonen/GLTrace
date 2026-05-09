@@ -100,6 +100,24 @@ int main(int argc, char* argv[])
     GLuint displayProgram = createShaderProgram();
     GLuint denoiseProgram = createComputeProgram("shaders/denoise.comp");
 
+    GLint loc_denoiseDir = glGetUniformLocation(denoiseProgram, "u_direction");
+    GLint loc_denoiseStepWidth = glGetUniformLocation(denoiseProgram, "u_stepWidth");
+    GLint loc_denoiseResolution = glGetUniformLocation(denoiseProgram, "u_resolution");
+
+    GLint loc_renderBothSides = glGetUniformLocation(computeProgram, "u_renderBothSides");
+    GLint loc_debugMode = glGetUniformLocation(computeProgram, "u_debugMode");
+    GLint loc_smoothShading = glGetUniformLocation(computeProgram, "u_smoothShading");
+    GLint loc_timeOfDay = glGetUniformLocation(computeProgram, "u_timeOfDay");
+    GLint loc_camForward = glGetUniformLocation(computeProgram, "u_camForward");
+    GLint loc_camRight = glGetUniformLocation(computeProgram, "u_camRight");
+    GLint loc_camUp = glGetUniformLocation(computeProgram, "u_camUp");
+    GLint loc_resolution = glGetUniformLocation(computeProgram, "u_resolution");
+    GLint loc_frameCount = glGetUniformLocation(computeProgram, "u_frameCount");
+    GLint loc_historyTexture = glGetUniformLocation(computeProgram, "u_historyTexture");
+    GLint loc_cameraPos = glGetUniformLocation(computeProgram, "u_cameraPos");
+    GLint loc_cameraYaw = glGetUniformLocation(computeProgram, "u_cameraYaw");
+    GLint loc_cameraPitch = glGetUniformLocation(computeProgram, "u_cameraPitch");
+
     setupGpuTextures(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     // Main loop
@@ -139,19 +157,19 @@ int main(int argc, char* argv[])
 
         glUseProgram(computeProgram);
 
-        glUniform1i(glGetUniformLocation(computeProgram, "u_renderBothSides"), g_program.renderBothSides);
-        glUniform1i(glGetUniformLocation(computeProgram, "u_debugMode"), g_program.debugmode);
-        glUniform1i(glGetUniformLocation(computeProgram, "u_smoothShading"), g_program.smoothShading);
-        glUniform1i(glGetUniformLocation(computeProgram, "u_timeOfDay"), g_program.timeOfDay);
-        glUniform3f(glGetUniformLocation(computeProgram, "u_camForward"), forward.x, forward.y, forward.z);
-        glUniform3f(glGetUniformLocation(computeProgram, "u_camRight"), right.x, right.y, right.z);
-        glUniform3f(glGetUniformLocation(computeProgram, "u_camUp"), trueUp.x, trueUp.y, trueUp.z);
-        glUniform2f(glGetUniformLocation(computeProgram, "u_resolution"), (float)g_program.newWidth, (float)g_program.newHeight);
-        glUniform1i(glGetUniformLocation(computeProgram, "u_frameCount"), g_program.frameCount);
-        glUniform1i(glGetUniformLocation(computeProgram, "u_historyTexture"), 0);
-        glUniform3f(glGetUniformLocation(computeProgram, "u_cameraPos"), g_program.camera.x, g_program.camera.y, g_program.camera.z);
-        glUniform1f(glGetUniformLocation(computeProgram, "u_cameraYaw"), g_program.camera.yaw);
-        glUniform1f(glGetUniformLocation(computeProgram, "u_cameraPitch"), g_program.camera.pitch);
+        glUniform1i(loc_renderBothSides, g_program.renderBothSides);
+        glUniform1i(loc_debugMode, g_program.debugmode);
+        glUniform1i(loc_smoothShading, g_program.smoothShading);
+        glUniform1i(loc_timeOfDay, g_program.timeOfDay);
+        glUniform3f(loc_camForward, forward.x, forward.y, forward.z);
+        glUniform3f(loc_camRight, right.x, right.y, right.z);
+        glUniform3f(loc_camUp, trueUp.x, trueUp.y, trueUp.z);
+        glUniform2f(loc_resolution, (float)g_program.newWidth, (float)g_program.newHeight);
+        glUniform1i(loc_frameCount, g_program.frameCount);
+        glUniform1i(loc_historyTexture, 0);
+        glUniform3f(loc_cameraPos, g_program.camera.x, g_program.camera.y, g_program.camera.z);
+        glUniform1f(loc_cameraYaw, g_program.camera.yaw);
+        glUniform1f(loc_cameraPitch, g_program.camera.pitch);
 
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_gpuTextures.accumTexture, 0);
         glActiveTexture(GL_TEXTURE0);
@@ -167,7 +185,7 @@ int main(int argc, char* argv[])
 
         // Denoiser
         glUseProgram(denoiseProgram);
-        glUniform2f(glGetUniformLocation(denoiseProgram, "u_resolution"), (float)g_program.newWidth, (float)g_program.newHeight);
+        glUniform2f(loc_denoiseResolution, (float)g_program.newWidth, (float)g_program.newHeight);
 
         GLuint readTex = g_gpuTextures.outputTexture;
         GLuint writeTex = g_gpuTextures.denoisedTexture;
@@ -195,12 +213,22 @@ int main(int argc, char* argv[])
         {
             for (int i = 0; i < denoisePasses; i++)
             {
-                glUniform1i(glGetUniformLocation(denoiseProgram, "u_stepWidth"), 1 << i);
+                int stepWidth = 1 << i;
 
+                glUniform1i(loc_denoiseStepWidth, stepWidth);
+                glUniform2i(loc_denoiseDir, 1, 0);
+
+                // Horizontal pass
                 glBindImageTexture(0, readTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
                 glBindImageTexture(1, g_gpuTextures.normalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-                glBindImageTexture(2, writeTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+                glBindImageTexture(2, g_gpuTextures.denoiseHorizontalTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+                glDispatchCompute((g_program.newWidth + 15) / 16, (g_program.newHeight + 15) / 16, 1);
+                glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
+                glUniform2i(loc_denoiseDir, 0, 1);
+                glBindImageTexture(0, g_gpuTextures.denoiseHorizontalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+                glBindImageTexture(1, g_gpuTextures.normalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+                glBindImageTexture(2, writeTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
                 glDispatchCompute((g_program.newWidth + 15) / 16, (g_program.newHeight + 15) / 16, 1);
                 glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -241,6 +269,7 @@ int main(int argc, char* argv[])
     glDeleteTextures(1, &g_gpuTextures.outputTexture);
     glDeleteTextures(1, &g_gpuTextures.denoisedTexture);
     glDeleteTextures(1, &g_gpuTextures.denoiseSwapTexture);
+    glDeleteTextures(1, &g_gpuTextures.denoiseHorizontalTexture);
     glDeleteVertexArrays(1, &vao);
 
     glFinish();

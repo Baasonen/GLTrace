@@ -8,6 +8,7 @@ layout(rgba32f, binding = 2) uniform writeonly image2D img_final;
 
 uniform vec2 u_resolution;
 uniform int u_stepWidth;
+uniform ivec2 u_direction;
 
 void main()
 {
@@ -37,45 +38,42 @@ void main()
 
     int radius = int(round(mix(1.0, 2.0, centerRoughness)));
 
-    for (int x = -radius; x <= radius; x++)
+    for (int i = -radius; i <= radius; i++)
     {
-        for (int y = -radius; y <= radius; y++)
-        {
-            if (x == 0 && y == 0) {continue;}
+        if (i == 0) {continue;}
 
-            ivec2 offset = ivec2(x, y) * u_stepWidth;
-            ivec2 neighborUV = uv + offset;
+        ivec2 neighborUV = uv + u_direction * (i * u_stepWidth);
 
-            if (neighborUV.x < 0 || neighborUV.y < 0 || neighborUV.x >= u_resolution.x || neighborUV.y >= u_resolution.y) {continue;}
+        if (neighborUV.x < 0 || neighborUV.y < 0 ||
+            neighborUV.x >= int(u_resolution.x) ||
+            neighborUV.y >= int(u_resolution.y)) {continue;}
 
             vec4 neighborColorRough = imageLoad(img_input, neighborUV);
-            vec3 neighborCol = neighborColorRough.rgb;
+            vec3 neighborColor = neighborColorRough.rgb;
 
             vec4 neighborData = imageLoad(img_normals, neighborUV);
-            vec3 neighborNorm = normalize(neighborData.rgb * 2.0 -1.0);
-            float neighborDepth = neighborData.w;
+            vec3 neighborNormal = normalize(neighborData.rgb * 2.0 - 1.0);
+            float neighborDepth = neighborData.a;
 
-            float distanceSq = float(x * x + y * y);
+            float distanceSq = float(i * i);
             float weightSq = exp(-distanceSq / 4.0);
 
-            float normalWeight = pow(max(0.0, dot(centerNorm, neighborNorm)), sNormal);
-            
+            float normalWeight = pow(max(0.0, dot(centerNorm, neighborNormal)), sNormal);
+
             float depthDiff = abs(centerDepth - neighborDepth);
             float depthWeight = exp(-depthDiff * depthDiff * sDepth);
 
             float lumCenter = dot(centerCol, vec3(0.299, 0.587, 0.114));
-            float lumNeighbor = dot(neighborCol, vec3(0.299, 0.587, 0.114));
+            float lumNeighbor = dot(neighborColor, vec3(0.299, 0.587, 0.114));
             float lumDiff = abs(lumCenter - lumNeighbor) * 0.3;
-
             float colorWeight = exp(-lumDiff * sColor);
 
             float specularProtection = clamp(centerRoughness * centerRoughness, 0.05, 1.0);
 
             float weight = weightSq * normalWeight * depthWeight * colorWeight * specularProtection;
 
-            sumColor += neighborCol * weight;
+            sumColor += neighborColor * weight;
             totalWight += weight;
-        }
     }
 
     imageStore(img_final, uv, vec4(sumColor / totalWight, centerRoughness));

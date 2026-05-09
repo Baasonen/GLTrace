@@ -10,8 +10,10 @@ typedef struct
     GLuint outputTexture;
 
     GLuint normalTexture;
+
     GLuint denoisedTexture;
     GLuint denoiseSwapTexture;
+    GLuint denoiseHorizontalTexture;
 } GPUTextures;
 
 typedef struct 

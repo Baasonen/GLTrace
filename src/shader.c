@@ -50,8 +50,9 @@ void setupGpuTextures(int width, int height)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    if (g_gpuTextures.normalTexture) glDeleteTextures(1, &g_gpuTextures.normalTexture);
-    if (g_gpuTextures.denoisedTexture) glDeleteTextures(1, &g_gpuTextures.denoisedTexture);
+    if (g_gpuTextures.normalTexture) {glDeleteTextures(1, &g_gpuTextures.normalTexture);}
+    if (g_gpuTextures.denoisedTexture) {glDeleteTextures(1, &g_gpuTextures.denoisedTexture);}
+    if (g_gpuTextures.denoiseHorizontalTexture) {glDeleteTextures(1, &g_gpuTextures.denoiseHorizontalTexture);}
 
     glGenTextures(1, &g_gpuTextures.normalTexture);
     glBindTexture(GL_TEXTURE_2D, g_gpuTextures.normalTexture);
@@ -67,6 +68,12 @@ void setupGpuTextures(int width, int height)
 
     glGenTextures(1, &g_gpuTextures.denoiseSwapTexture);
     glBindTexture(GL_TEXTURE_2D, g_gpuTextures.denoiseSwapTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glGenTextures(1, &g_gpuTextures.denoiseHorizontalTexture);
+    glBindTexture(GL_TEXTURE_2D, g_gpuTextures.denoiseHorizontalTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

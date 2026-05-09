@@ -42,6 +42,13 @@ struct BVHNode
     uint triCount;
 };
 
+struct hitResult
+{
+    float t;
+    float baryU;
+    float baryV;
+};
+
 const float M_PI = 3.1415926;
 
 layout(std430, binding = 0) buffer SceneData {Sphere spheres[];};
@@ -111,7 +118,7 @@ float hitAABB(vec3 aabbMin, vec3 aabbMax, vec3 ro, vec3 invDir)
     return (tFar >= tNear && tFar > 0.0) ? max(0.0, tNear) : 1e30;
 }
 
-float hitTriangleIndexed(int triIndex, vec3 ro, vec3 rd)
+hitResult hitTriangleIndexed(int triIndex, vec3 ro, vec3 rd)
 {
     uint i0 = indices[3 * triIndex + 0];
     uint i1 = indices[3 * triIndex + 1];
@@ -126,23 +133,24 @@ float hitTriangleIndexed(int triIndex, vec3 ro, vec3 rd)
     vec3 h = cross(rd, edge2);
     float a = dot(edge1, h);
 
-    if (u_renderBothSides == 0) {if (a < 0.0001) {return -1.0;}}
-    else {if (abs(a) < 0.0001) {return -1.0;}}
+    if (u_renderBothSides == 0) {if (a < 0.0001) {return hitResult(-1.0, 0.0, 0.0);}}
+    else {if (abs(a) < 0.0001) {return hitResult(-1.0, 0.0, 0.0);}}
 
     float f = 1.0 / a;
     vec3 s = ro - v0;
     float u = f * dot(s, h);
 
-    if (u < 0.0 || u > 1.0) {return -1.0;}
+    if (u < 0.0 || u > 1.0) {return hitResult(-1.0, 0.0, 0.0);}
 
     vec3 q = cross(s, edge1);
     float v = f * dot(rd, q);
 
-    if (v < 0.0 || u + v > 1.0) {return -1.0;}
+    if (v < 0.0 || u + v > 1.0) {return hitResult(-1.0, 0.0, 0.0);}
 
     float t = f * dot(edge2, q);
 
-    return (t > 0.001) ? t : -1.0;
+    if (t > 0.001) {return hitResult(t, u, v);};
+    return hitResult(-1.0, 0.0, 0.0);
 }
 
 float hitSphere(Sphere s, vec3 ro, vec3 rd)
@@ -155,11 +163,15 @@ float hitSphere(Sphere s, vec3 ro, vec3 rd)
     return (h < 0.0) ? -1.0 : (-b - sqrt(h));
 }
 
-void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay, out float minT, out int hitIndex, out int hitType)
+void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay, 
+                    out float minT, out int hitIndex, out int hitType,
+                    out float baryU, out float baryV)
 {
     minT = 10000.0;
     hitIndex = -1;
     hitType = 0;
+    baryU = 0.0;
+    baryV = 0.0;
 
     // Check for sphere
     for(int i = 0; i < spheres.length(); i++)
@@ -198,13 +210,15 @@ void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay, out float mi
             for (uint i = 0; i < node.triCount; i++)
             {
                 int triIdx = int(node.leftFirst + i);
-                float t = hitTriangleIndexed(triIdx, ro, rd);
+                hitResult hitRes = hitTriangleIndexed(triIdx, ro, rd);
 
-                if (t > 0.001 && t < minT)
+                if (hitRes.t > 0.001 && hitRes.t < minT)
                 {
-                    minT = t;
+                    minT = hitRes.t;
                     hitIndex = triIdx;
                     hitType = 2;
+                    baryU = hitRes.baryU;
+                    baryV = hitRes.baryV;
                 }
             }
         }
@@ -236,7 +250,7 @@ void main()
 
     if (pixelCoord.x >= int(u_resolution.x) || pixelCoord.y >= int(u_resolution.y)) {return;}
 
-    uint seed = uint(pixelCoord.x) + uint(pixelCoord.y) * uint(u_resolution) + uint(u_frameCount) * 7125413u;
+    uint seed = uint(pixelCoord.x) + uint(pixelCoord.y) * uint(u_resolution.x) + uint(u_frameCount) * 7125413u;
 
     // Camera
     float aspect = u_resolution.x / u_resolution.y;
@@ -273,9 +287,14 @@ void main()
             float minT;
             int hitIndex;
             int hitType;
+            float baryU;
+            float baryV;
+            bool firstHit = false;
 
             vec3 invDir = 1.0 / currentRd;
-            findClosestHit(currentRo, currentRd, invDir, (bounce == 0), minT, hitIndex, hitType);
+            findClosestHit(currentRo, currentRd, invDir, (bounce == 0), minT, hitIndex, hitType, baryU, baryV);
+
+            if (bounce == 0 && hitIndex != -1) {firstHit = true;}
 
             if (hitIndex != -1)
             {
@@ -307,21 +326,11 @@ void main()
 
                     if (u_smoothShading == 1)
                     {
-                        vec3 h = cross(currentRd, edge2);
-                        float a = dot(edge1, h);
-
-                        float f = 1.0 / a;
-                        vec3 s = currentRo - v0;
-                        float u = f * dot(s, h);
-
-                        vec3 q = cross(s, edge1);
-                        float v = f * dot(currentRd, q);
-
-                        float w = 1.0 - u - v;
+                        float w = 1.0 - baryU - baryV;
 
                         normal = normalize(vertices[i0].normal * w +
-                                           vertices[i1].normal * u +
-                                           vertices[i2].normal * v);
+                                           vertices[i1].normal * baryU +
+                                           vertices[i2].normal * baryV);
                     }
                     else {normal = geometricNormal;}
                     
@@ -417,7 +426,7 @@ void main()
                     currentRo = hitPos + normal * 0.001;
                 }
 
-                if (bounce == 0 && s == 0) 
+                if (firstHit) 
                 {
                     firstNormal = vec4(normal * 0.5 + 0.5, minT);
                     firstRoughness = materials[materialIndex].roughness;    
