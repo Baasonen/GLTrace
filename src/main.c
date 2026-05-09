@@ -108,6 +108,7 @@ int main(int argc, char* argv[])
     GLint loc_debugMode = glGetUniformLocation(computeProgram, "u_debugMode");
     GLint loc_smoothShading = glGetUniformLocation(computeProgram, "u_smoothShading");
     GLint loc_timeOfDay = glGetUniformLocation(computeProgram, "u_timeOfDay");
+    GLint loc_skyEnabled = glGetUniformLocation(computeProgram, "u_skyEnabled");
     GLint loc_camForward = glGetUniformLocation(computeProgram, "u_camForward");
     GLint loc_camRight = glGetUniformLocation(computeProgram, "u_camRight");
     GLint loc_camUp = glGetUniformLocation(computeProgram, "u_camUp");
@@ -161,6 +162,7 @@ int main(int argc, char* argv[])
         glUniform1i(loc_debugMode, g_program.debugmode);
         glUniform1i(loc_smoothShading, g_program.smoothShading);
         glUniform1i(loc_timeOfDay, g_program.timeOfDay);
+        glUniform1i(loc_skyEnabled, g_program.skyEnabled);
         glUniform3f(loc_camForward, forward.x, forward.y, forward.z);
         glUniform3f(loc_camRight, right.x, right.y, right.z);
         glUniform3f(loc_camUp, trueUp.x, trueUp.y, trueUp.z);

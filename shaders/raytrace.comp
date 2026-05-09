@@ -65,6 +65,7 @@ uniform vec3 u_cameraPos;
 uniform float u_cameraYaw;
 uniform float u_cameraPitch;
 uniform int u_timeOfDay;
+uniform int u_skyEnabled;
 uniform int u_smoothShading;
 uniform int u_debugMode;
 uniform int u_renderBothSides;
@@ -494,6 +495,8 @@ void main()
 
                 float skyIntensity = smoothstep(-0.2, 0.2, sunAlt); 
                 skyColor *= mix(0.4, 1.0, skyIntensity);
+
+                if (u_skyEnabled == 0) {skyColor = vec3(0.0, 0.0, 0.0);}
 
                 accumulatedLight += throughput * skyColor;
                 break;

@@ -24,6 +24,13 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         g_program.frameCount = 0;
     }
 
+    if (key == GLFW_KEY_B && action == GLFW_PRESS)
+    {
+        g_program.skyEnabled = !g_program.skyEnabled;
+
+        g_program.frameCount = 0;
+    }
+
     if (key == GLFW_KEY_L && action == GLFW_PRESS)
     {
         g_program.cameraLock = !g_program.cameraLock;

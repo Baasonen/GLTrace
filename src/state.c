@@ -23,6 +23,7 @@ State g_program = {
     .mouseSensitivity = 0.1f,
 
     .timeOfDay = 300,
+    .skyEnabled = true,
     .enableDenoise = true,
     .adaptiveDenoising = false,
     .smoothShading = false,
