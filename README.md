@@ -11,17 +11,6 @@ Path tracer written in **C** using **OpenGL 4.6** with support for meshes with S
 
 ***NOTE: Vsync disabled by default to increase throughput***
 ***
-### Controls
-|Key|Action|
-|:---|:---:|
-|N|Sky color|
-|F|Denoise|
-|G|Smooth Shading|
-|L|Lock camera|
-|W/A/S/D|Move camera|
-|Space / LCTRL|Move camera (Z)|
-|Esc|Quit|
-
 
 **Models are not my own, find them from: models/download_links.txt**
 
