@@ -118,6 +118,8 @@ int main(int argc, char* argv[])
     GLint loc_cameraPos = glGetUniformLocation(computeProgram, "u_cameraPos");
     GLint loc_cameraYaw = glGetUniformLocation(computeProgram, "u_cameraYaw");
     GLint loc_cameraPitch = glGetUniformLocation(computeProgram, "u_cameraPitch");
+    GLint loc_nee = glGetUniformLocation(computeProgram, "u_nee");
+    GLint loc_sunStrength = glGetUniformLocation(computeProgram, "u_sunStrength");
 
     setupGpuTextures(WINDOW_WIDTH, WINDOW_HEIGHT);
 
@@ -172,6 +174,9 @@ int main(int argc, char* argv[])
         glUniform3f(loc_cameraPos, g_program.camera.x, g_program.camera.y, g_program.camera.z);
         glUniform1f(loc_cameraYaw, g_program.camera.yaw);
         glUniform1f(loc_cameraPitch, g_program.camera.pitch);
+
+        glUniform1i(loc_nee, g_program.nee);
+        glUniform1f(loc_sunStrength, g_program.sunStrength);
 
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_gpuTextures.accumTexture, 0);
         glActiveTexture(GL_TEXTURE0);

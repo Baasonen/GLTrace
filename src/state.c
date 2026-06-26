@@ -22,11 +22,13 @@ State g_program = {
     .lastY = WINDOW_HEIGHT / 2.0f,
     .mouseSensitivity = 0.1f,
 
-    .timeOfDay = 300,
+    .timeOfDay = 450,
     .skyEnabled = true,
     .enableDenoise = true,
     .adaptiveDenoising = false,
     .smoothShading = false,
     .debugmode = false,
-    .renderBothSides = false
+    .renderBothSides = false,
+    .nee = false,
+    .sunStrength = 30.0f,
 };

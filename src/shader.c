@@ -52,6 +52,7 @@ void setupGpuTextures(int width, int height)
 
     if (g_gpuTextures.normalTexture) {glDeleteTextures(1, &g_gpuTextures.normalTexture);}
     if (g_gpuTextures.denoisedTexture) {glDeleteTextures(1, &g_gpuTextures.denoisedTexture);}
+    if (g_gpuTextures.denoiseSwapTexture) {glDeleteTextures(1, &g_gpuTextures.denoiseSwapTexture);}
     if (g_gpuTextures.denoiseHorizontalTexture) {glDeleteTextures(1, &g_gpuTextures.denoiseHorizontalTexture);}
 
     glGenTextures(1, &g_gpuTextures.normalTexture);

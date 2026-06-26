@@ -66,4 +66,25 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         g_program.adaptiveDenoising = !g_program.adaptiveDenoising;
         printf("Adaptive denoising: %s\n", g_program.adaptiveDenoising ? "Enabled" : "Disabled");
     }
+
+    if (key == GLFW_KEY_8 && action == GLFW_PRESS)
+    {
+        g_program.nee = !g_program.nee;
+        g_program.frameCount = 0;
+        printf("NEE: %s\n", g_program.nee ? "Enabled" : "Disabled");
+    }
+
+    if (key == GLFW_KEY_9 && action == GLFW_PRESS)
+    {
+        g_program.sunStrength += 1.0f;
+        g_program.frameCount = 0;
+        printf("SunStrength: %f\n", g_program.sunStrength);
+    }
+
+    if (key == GLFW_KEY_7 && action == GLFW_PRESS)
+    {
+        g_program.sunStrength -= 1.0f;
+        g_program.frameCount = 0;
+        printf("SunStrength: %f\n", g_program.sunStrength);
+    }
 }

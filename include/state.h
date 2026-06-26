@@ -33,6 +33,8 @@ typedef struct
     bool smoothShading;
     bool debugmode;
     bool renderBothSides;
+    bool nee;
+    float sunStrength;
 } State;
 
 extern State g_program;
