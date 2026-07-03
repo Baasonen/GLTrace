@@ -622,6 +622,15 @@ void main()
     vec3 prevColor = texture(u_historyTexture, texUV).rgb;
     
     float weight = 1.0 / float(u_frameCount);
+
+    if (u_frameCount > 4)
+    {
+        float lum = dot(frameColor, vec3(0.299, 0.587, 0.114));
+        float prevLum = dot(prevColor, vec3(0.299, 0.587, 0.114));
+        float maxAllowed = prevLum * 4.0 + 0.5; 
+        if (lum > maxAllowed) {frameColor *= maxAllowed / lum;}
+    }
+    
     vec3 finalLinear = mix(prevColor, frameColor, weight);
 
     //imageStore(img_output, pixelCoord, vec4(firstNormal.rgb, 1.0));

@@ -35,6 +35,8 @@ typedef struct
     bool renderBothSides;
     bool nee;
     float sunStrength;
+    bool printFPS;
+    bool preDenoise;
 } State;
 
 extern State g_program;

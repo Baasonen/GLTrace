@@ -14,6 +14,7 @@ typedef struct
     GLuint denoisedTexture;
     GLuint denoiseSwapTexture;
     GLuint denoiseHorizontalTexture;
+    GLuint denoisePreTexture;
 } GPUTextures;
 
 typedef struct 

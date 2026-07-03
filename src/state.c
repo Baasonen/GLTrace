@@ -29,6 +29,8 @@ State g_program = {
     .smoothShading = false,
     .debugmode = false,
     .renderBothSides = false,
-    .nee = false,
-    .sunStrength = 30.0f,
+    .nee = true,
+    .sunStrength = 45.0f,
+    .printFPS = true,
+    .preDenoise = true,
 };

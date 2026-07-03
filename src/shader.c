@@ -11,10 +11,10 @@ SSBOS g_ssbo = {0};
 GPUTextures g_gpuTextures = {
             .accumTexture = 0,
             .outputTexture = 0,
-
             .normalTexture = 0,
             .denoisedTexture = 0,
-            .denoiseSwapTexture = 0
+            .denoiseSwapTexture = 0,
+            .denoisePreTexture = 0
 };
 
 void setupSSBO(void)
@@ -54,6 +54,7 @@ void setupGpuTextures(int width, int height)
     if (g_gpuTextures.denoisedTexture) {glDeleteTextures(1, &g_gpuTextures.denoisedTexture);}
     if (g_gpuTextures.denoiseSwapTexture) {glDeleteTextures(1, &g_gpuTextures.denoiseSwapTexture);}
     if (g_gpuTextures.denoiseHorizontalTexture) {glDeleteTextures(1, &g_gpuTextures.denoiseHorizontalTexture);}
+    if (g_gpuTextures.denoisePreTexture) {glDeleteTextures(1, &g_gpuTextures.denoisePreTexture);}
 
     glGenTextures(1, &g_gpuTextures.normalTexture);
     glBindTexture(GL_TEXTURE_2D, g_gpuTextures.normalTexture);
@@ -75,6 +76,12 @@ void setupGpuTextures(int width, int height)
 
     glGenTextures(1, &g_gpuTextures.denoiseHorizontalTexture);
     glBindTexture(GL_TEXTURE_2D, g_gpuTextures.denoiseHorizontalTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glGenTextures(1, &g_gpuTextures.denoisePreTexture);
+    glBindTexture(GL_TEXTURE_2D, g_gpuTextures.denoisePreTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

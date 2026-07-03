@@ -99,10 +99,12 @@ int main(int argc, char* argv[])
     GLuint computeProgram = createComputeProgram("shaders/raytrace.comp");
     GLuint displayProgram = createShaderProgram();
     GLuint denoiseProgram = createComputeProgram("shaders/denoise.comp");
+    GLuint preDenoiseProgram = createComputeProgram("shaders/pre_denoise.comp");
 
     GLint loc_denoiseDir = glGetUniformLocation(denoiseProgram, "u_direction");
     GLint loc_denoiseStepWidth = glGetUniformLocation(denoiseProgram, "u_stepWidth");
     GLint loc_denoiseResolution = glGetUniformLocation(denoiseProgram, "u_resolution");
+    GLint loc_preDenoiseResolution = glGetUniformLocation(preDenoiseProgram, "u_resolution");
 
     GLint loc_renderBothSides = glGetUniformLocation(computeProgram, "u_renderBothSides");
     GLint loc_debugMode = glGetUniformLocation(computeProgram, "u_debugMode");
@@ -129,6 +131,20 @@ int main(int argc, char* argv[])
         float currentFrame = (float)glfwGetTime();
         g_program.deltaTime = currentFrame - g_program.lastFrame;
         g_program.lastFrame = currentFrame;
+
+        static int fpsFrameCounter = 0;
+        static float fpsTimer = 0.0f;
+
+        fpsFrameCounter++;
+        fpsTimer += g_program.deltaTime;
+
+        if (g_program.printFPS && fpsTimer >= 1.0f)
+        {
+            printf("Samples/s: %d | Accumulated samples: %d\n", fpsFrameCounter, g_program.frameCount);
+
+            fpsFrameCounter = 0;
+            fpsTimer = 0.0f;
+        }
 
         //printf("%f, %f, %f\n", g_camera.x, g_camera.y, g_camera.z);
 
@@ -178,7 +194,7 @@ int main(int argc, char* argv[])
         glUniform1i(loc_nee, g_program.nee);
         glUniform1f(loc_sunStrength, g_program.sunStrength);
 
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_gpuTextures.accumTexture, 0);
+        //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_gpuTextures.accumTexture, 0);
         glActiveTexture(GL_TEXTURE0);
 
         glBindTexture(GL_TEXTURE_2D, g_gpuTextures.accumTexture);
@@ -191,8 +207,8 @@ int main(int argc, char* argv[])
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
         // Denoiser
-        glUseProgram(denoiseProgram);
-        glUniform2f(loc_denoiseResolution, (float)g_program.newWidth, (float)g_program.newHeight);
+        //glUseProgram(denoiseProgram);
+        //glUniform2f(loc_denoiseResolution, (float)g_program.newWidth, (float)g_program.newHeight);
 
         GLuint readTex = g_gpuTextures.outputTexture;
         GLuint writeTex = g_gpuTextures.denoisedTexture;
@@ -218,6 +234,25 @@ int main(int argc, char* argv[])
 
         if (g_program.enableDenoise)
         {
+            glUseProgram(denoiseProgram);
+            glUniform2f(loc_denoiseResolution, (float)g_program.newWidth, (float)g_program.newHeight);
+
+            if (g_program.preDenoise)
+            {
+                glUseProgram(preDenoiseProgram);
+                glUniform2f(loc_preDenoiseResolution, (float)g_program.newWidth, (float)g_program.newHeight);
+
+                glBindImageTexture(0, g_gpuTextures.outputTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+                glBindImageTexture(1, g_gpuTextures.denoisePreTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+                glDispatchCompute((g_program.newWidth + 15) / 16, (g_program.newHeight + 15) / 16, 1);
+                glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+                readTex = g_gpuTextures.denoisePreTexture;
+                glUseProgram(denoiseProgram);
+            }
+
+            glUniform2f(loc_denoiseResolution, (float)g_program.newWidth, (float)g_program.newHeight);
+
             for (int i = 0; i < denoisePasses; i++)
             {
                 int stepWidth = 1 << i;
@@ -274,9 +309,11 @@ int main(int argc, char* argv[])
 
     glDeleteTextures(1, &g_gpuTextures.accumTexture);
     glDeleteTextures(1, &g_gpuTextures.outputTexture);
+    glDeleteTextures(1, &g_gpuTextures.normalTexture);
     glDeleteTextures(1, &g_gpuTextures.denoisedTexture);
     glDeleteTextures(1, &g_gpuTextures.denoiseSwapTexture);
     glDeleteTextures(1, &g_gpuTextures.denoiseHorizontalTexture);
+    glDeleteTextures(1, &g_gpuTextures.denoisePreTexture);
     glDeleteVertexArrays(1, &vao);
 
     glFinish();

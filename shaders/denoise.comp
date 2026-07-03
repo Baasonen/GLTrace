@@ -34,7 +34,7 @@ void main()
 
     float sDepth = 0.9;
     float sNormal = 128.0;
-    float sColor = 35.0;
+    float sColor = 70.0;
 
     int radius = int(round(mix(1.0, 2.0, centerRoughness)));
 
@@ -65,8 +65,9 @@ void main()
 
             float lumCenter = dot(centerCol, vec3(0.299, 0.587, 0.114));
             float lumNeighbor = dot(neighborColor, vec3(0.299, 0.587, 0.114));
-            float lumDiff = abs(lumCenter - lumNeighbor) * 0.3;
-            float colorWeight = exp(-lumDiff * sColor);
+
+            float lumDiff = abs(lumCenter - lumNeighbor) / (max(lumCenter, lumNeighbor) + 0.05);
+            float colorWeight = exp(-lumDiff * lumDiff * sColor);
 
             float specularProtection = clamp(centerRoughness * centerRoughness, 0.05, 1.0);
 
