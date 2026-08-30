@@ -2,9 +2,9 @@
 
 layout(local_size_x = 16, local_size_y = 16) in;
 
-layout(rgba32f, binding = 0) uniform readonly image2D img_input;   
+layout(rgba16f, binding = 0) uniform readonly image2D img_input;   
 layout(rgba32f, binding = 1) uniform readonly image2D img_normals;
-layout(rgba32f, binding = 2) uniform writeonly image2D img_final;
+layout(rgba16f, binding = 2) uniform writeonly image2D img_final;
 
 uniform vec2 u_resolution;
 uniform int u_stepWidth;

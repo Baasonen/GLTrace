@@ -292,9 +292,13 @@ bool castShadowRay(vec3 ro, vec3 rd)
             for (uint i = 0; i < node.triCount; i++)
             {
                 int triIdx = int(node.leftFirst + i);
+                uint matIdx = triangleMaterials[triIdx];
 
-                hitResult hr = hitTriangleIndexed(triIdx, ro, rd);
-                if (hr.t > 0.001 && materials[int(triangleMaterials[triIdx])].opacity > 0.5) {return true;}
+                if (materials[matIdx].opacity > 0.5)
+                {
+                    hitResult hr = hitTriangleIndexed(triIdx, ro, rd);
+                    if (hr.t > 0.001) {return true;}
+                }
             }
         }
         else

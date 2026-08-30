@@ -105,6 +105,7 @@ int main(int argc, char* argv[])
     GLint loc_denoiseStepWidth = glGetUniformLocation(denoiseProgram, "u_stepWidth");
     GLint loc_denoiseResolution = glGetUniformLocation(denoiseProgram, "u_resolution");
     GLint loc_preDenoiseResolution = glGetUniformLocation(preDenoiseProgram, "u_resolution");
+    GLint loc_preDenoiseClampEnabled = glGetUniformLocation(preDenoiseProgram, "u_clampEnabled");
 
     GLint loc_renderBothSides = glGetUniformLocation(computeProgram, "u_renderBothSides");
     GLint loc_debugMode = glGetUniformLocation(computeProgram, "u_debugMode");
@@ -234,23 +235,19 @@ int main(int argc, char* argv[])
 
         if (g_program.enableDenoise)
         {
+            // Always run pre-denoise to convert oputputTexture to RGBA16F
+            glUseProgram(preDenoiseProgram);
+            glUniform2f(loc_preDenoiseResolution, (float)g_program.newWidth, (float)g_program.newHeight);
+            glUniform1i(loc_preDenoiseClampEnabled, g_program.preDenoise ? 1 : 0);
+
+            glBindImageTexture(0, g_gpuTextures.outputTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+            glBindImageTexture(1, g_gpuTextures.denoisePreTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+            glDispatchCompute((g_program.newWidth + 15) / 16, (g_program.newHeight + 15) / 16, 1);
+            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+            readTex = g_gpuTextures.denoisePreTexture;
+
             glUseProgram(denoiseProgram);
-            glUniform2f(loc_denoiseResolution, (float)g_program.newWidth, (float)g_program.newHeight);
-
-            if (g_program.preDenoise)
-            {
-                glUseProgram(preDenoiseProgram);
-                glUniform2f(loc_preDenoiseResolution, (float)g_program.newWidth, (float)g_program.newHeight);
-
-                glBindImageTexture(0, g_gpuTextures.outputTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-                glBindImageTexture(1, g_gpuTextures.denoisePreTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-                glDispatchCompute((g_program.newWidth + 15) / 16, (g_program.newHeight + 15) / 16, 1);
-                glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-                readTex = g_gpuTextures.denoisePreTexture;
-                glUseProgram(denoiseProgram);
-            }
-
             glUniform2f(loc_denoiseResolution, (float)g_program.newWidth, (float)g_program.newHeight);
 
             for (int i = 0; i < denoisePasses; i++)
@@ -261,16 +258,16 @@ int main(int argc, char* argv[])
                 glUniform2i(loc_denoiseDir, 1, 0);
 
                 // Horizontal pass
-                glBindImageTexture(0, readTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+                glBindImageTexture(0, readTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
                 glBindImageTexture(1, g_gpuTextures.normalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-                glBindImageTexture(2, g_gpuTextures.denoiseHorizontalTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+                glBindImageTexture(2, g_gpuTextures.denoiseHorizontalTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
                 glDispatchCompute((g_program.newWidth + 15) / 16, (g_program.newHeight + 15) / 16, 1);
                 glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
                 glUniform2i(loc_denoiseDir, 0, 1);
-                glBindImageTexture(0, g_gpuTextures.denoiseHorizontalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+                glBindImageTexture(0, g_gpuTextures.denoiseHorizontalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
                 glBindImageTexture(1, g_gpuTextures.normalTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-                glBindImageTexture(2, writeTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+                glBindImageTexture(2, writeTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
                 glDispatchCompute((g_program.newWidth + 15) / 16, (g_program.newHeight + 15) / 16, 1);
                 glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 

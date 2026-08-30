@@ -2,9 +2,10 @@
 
 layout(local_size_x = 16, local_size_y = 16) in;
 layout(rgba32f, binding = 0) uniform readonly image2D imgInput;
-layout(rgba32f, binding = 1) uniform writeonly image2D imgOutput;
+layout(rgba16f, binding = 1) uniform writeonly image2D imgOutput;
 
 uniform vec2 u_resolution;
+uniform int u_clampEnabled;
 
 void main()
 {
@@ -41,7 +42,7 @@ void main()
     vec3 result = center;
     //bool wasClamped = false;
 
-    if (lumCenter > lumNeighborMax * clampFactor && lumNeighborMax > 1e-4)
+    if (u_clampEnabled == 1 && lumCenter > lumNeighborMax * clampFactor && lumNeighborMax > 1e-4)
     {
         result = mix(center, neihgborAvg, 0.9);
         //wasClamped = true;
