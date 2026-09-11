@@ -17,6 +17,23 @@ GPUTextures g_gpuTextures = {
             .denoisePreTexture = 0
 };
 
+MaterialEditorState g_matEditor = {0};
+
+void uploadMaterial(int idx)
+{
+    if (idx < 0 || idx >= g_matEditor.matCount) {return;}
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_ssbo.ssboMaterials);
+
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER,
+                    sizeof(Material) * idx,
+                    sizeof(Material),
+                    &g_matEditor.materials[idx]);
+
+    g_program.frameCount = 0;
+}
+
+
 void setupSSBO(void)
 {
     glGenBuffers(1, &g_ssbo.ssboSpheres);

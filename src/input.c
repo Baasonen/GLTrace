@@ -34,6 +34,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     if (key == GLFW_KEY_L && action == GLFW_PRESS)
     {
         g_program.cameraLock = !g_program.cameraLock;
+
+        glfwSetInputMode(window, GLFW_CURSOR, g_program.cameraLock ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
     }
 
     if (key == GLFW_KEY_F && action == GLFW_PRESS)
@@ -56,9 +58,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
     if (key == GLFW_KEY_H && action == GLFW_PRESS)
     {
-        g_program.renderBothSides = !g_program.renderBothSides;
-        g_program.frameCount = 0;
-        printf("Double sided rendering: %s\n", g_program.renderBothSides ? "Enabled" : "disabled");
+        g_program.showMenu = !g_program.showMenu;
     }
 
     if (key == GLFW_KEY_1 && action == GLFW_PRESS)

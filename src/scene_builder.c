@@ -106,7 +106,7 @@ void setupSceneData(SSBOS ssbo, SceneDescription* sceneDesc)
 
     // Materials
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo.ssboMaterials);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Material) * sceneDesc->materialCount, sceneDesc->materials, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Material) * sceneDesc->materialCount, sceneDesc->materials, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo.ssboMaterials);
 
     free(bvh.nodes);

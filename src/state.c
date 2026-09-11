@@ -33,4 +33,5 @@ State g_program = {
     .sunStrength = 45.0f,
     .printFPS = true,
     .preDenoise = true,
+    .showMenu = true,
 };

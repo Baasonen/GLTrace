@@ -19,6 +19,7 @@
 #include "state.h"
 #include "config.h"
 #include "input.h"
+#include "ui.h"
 
 #ifdef _WIN32
 __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
@@ -76,6 +77,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    UIInit(window);
+
     // Vsync
     glfwSwapInterval(0);
 
@@ -93,6 +96,10 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Failed to load scene %s\n", scenePath);
         return 1;
     }
+
+    g_matEditor.materials = scene.materials;
+    g_matEditor.matCount = scene.materialCount;
+    g_matEditor.selected = 0;
 
     setupSceneData(g_ssbo, &scene);
 
@@ -294,6 +301,13 @@ int main(int argc, char* argv[])
         g_gpuTextures.accumTexture = g_gpuTextures.outputTexture;
         g_gpuTextures.outputTexture = temp;
 
+        if (g_program.showMenu)
+        {
+            UINewFrame();
+            UIDraw();
+            UIRender();
+        }
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }   
@@ -312,6 +326,8 @@ int main(int argc, char* argv[])
     glDeleteTextures(1, &g_gpuTextures.denoiseHorizontalTexture);
     glDeleteTextures(1, &g_gpuTextures.denoisePreTexture);
     glDeleteVertexArrays(1, &vao);
+
+    UIShutdown();
 
     glFinish();
     glfwTerminate();

@@ -5,6 +5,10 @@
 
 #include "camera.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct 
 {
     Camera camera;
@@ -37,8 +41,13 @@ typedef struct
     float sunStrength;
     bool printFPS;
     bool preDenoise;
+    bool showMenu;
 } State;
 
 extern State g_program;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
