@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+#include <stdio.h>
 
 #include "state.h"
 #include "shader.h"
@@ -82,12 +83,28 @@ static void drawMaterialEditor(void)
  
 static void drawInfo(void)
 {
+    static float deltaHistory[120] = {0.0f};
+    static int deltaOffset = 0;
+
+    deltaHistory[deltaOffset] = g_program.deltaTime * 1000.0f;
+    deltaOffset = (deltaOffset + 1) % IM_ARRAYSIZE(deltaHistory);
+
     if (!ImGui::CollapsingHeader("Info")) {return;}
- 
+
     ImGui::Text("Frame: %d", g_program.frameCount);
     ImGui::Text("Delta: %.2f ms", g_program.deltaTime * 1000.0f);
     ImGui::Text("Camera: %.2f, %.2f, %.2f", g_program.camera.x, g_program.camera.y, g_program.camera.z);
     ImGui::Text("Yaw/Pitch: %.1f / %.1f", g_program.camera.yaw, g_program.camera.pitch);
+
+    float avg = 0.0f;
+    for (int i = 0; i < IM_ARRAYSIZE(deltaHistory); ++i) {avg += deltaHistory[i];}
+    avg /= (float)IM_ARRAYSIZE(deltaHistory);
+
+    char overlay[32];
+    snprintf(overlay, sizeof(overlay), "avg %.2f ms", avg);
+
+    ImGui::PlotLines("##delta", deltaHistory, IM_ARRAYSIZE(deltaHistory), deltaOffset,
+                     overlay, 0.0f, FLT_MAX, ImVec2(0.0f, 60.0f));
 }
 
 void UIDraw(void)
