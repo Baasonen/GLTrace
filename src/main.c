@@ -131,6 +131,9 @@ int main(int argc, char* argv[])
     GLint loc_nee = glGetUniformLocation(computeProgram, "u_nee");
     GLint loc_sunStrength = glGetUniformLocation(computeProgram, "u_sunStrength");
 
+    GLint loc_samplse = glGetUniformLocation(computeProgram, "u_samples");
+    GLint loc_maxBounces = glGetUniformLocation(computeProgram, "u_maxBounces");
+
     setupGpuTextures(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     // Main loop
@@ -145,14 +148,6 @@ int main(int argc, char* argv[])
 
         fpsFrameCounter++;
         fpsTimer += g_program.deltaTime;
-
-        if (g_program.printFPS && fpsTimer >= 1.0f)
-        {
-            printf("Samples/s: %d | Accumulated samples: %d\n", fpsFrameCounter, g_program.frameCount);
-
-            fpsFrameCounter = 0;
-            fpsTimer = 0.0f;
-        }
 
         //printf("%f, %f, %f\n", g_camera.x, g_camera.y, g_camera.z);
 
@@ -202,6 +197,9 @@ int main(int argc, char* argv[])
         glUniform1i(loc_nee, g_program.nee);
         glUniform1f(loc_sunStrength, g_program.sunStrength);
 
+        glUniform1i(loc_samplse, g_program.samples);
+        glUniform1i(loc_maxBounces, g_program.maxBounces);
+
         //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_gpuTextures.accumTexture, 0);
         glActiveTexture(GL_TEXTURE0);
 
@@ -211,7 +209,7 @@ int main(int argc, char* argv[])
         // RT 
         glBindImageTexture(0, g_gpuTextures.outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
         glBindImageTexture(1, g_gpuTextures.normalTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        glDispatchCompute((g_program.newWidth + 15) / 16, (g_program.newHeight + 15) / 16, 1);
+        glDispatchCompute((g_program.newWidth + 7) / 8, (g_program.newHeight + 7) / 8, 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
         // Denoiser

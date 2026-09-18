@@ -13,9 +13,12 @@ State g_program = {
     .lastFrame = 0.0f,
     .frameCount = 0,
 
+    .samples = 1,
+    .maxBounces = 7,
+
     .camera = {0.0f, 0.0f, 200.0f, -90.0f, 0.0f, 1.0f}, 
     .cameraSpeed = 100.0f,
-    .cameraLock = false,
+    .cameraLock = true,
 
     .firstMouse = true,
     .lastX = WINDOW_WIDTH / 2.0f,
@@ -30,8 +33,7 @@ State g_program = {
     .debugmode = false,
     .renderBothSides = false,
     .nee = true,
-    .sunStrength = 45.0f,
-    .printFPS = true,
+    .sunStrength = 100.0f,
     .preDenoise = true,
     .showMenu = true,
 };

@@ -25,6 +25,9 @@ typedef struct
     float deltaTime;
     float lastFrame;
 
+    int samples;
+    int maxBounces;
+
     bool firstMouse;
     float lastX;
     float lastY;
@@ -39,7 +42,6 @@ typedef struct
     bool renderBothSides;
     bool nee;
     float sunStrength;
-    bool printFPS;
     bool preDenoise;
     bool showMenu;
 } State;

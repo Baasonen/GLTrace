@@ -88,11 +88,6 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         printf("SunStrength: %f\n", g_program.sunStrength);
     }
 
-    if (key == GLFW_KEY_C && action == GLFW_PRESS)
-    {
-        g_program.printFPS = !g_program.printFPS;
-    }
-
     if (key == GLFW_KEY_V && action == GLFW_PRESS)
     {
         g_program.preDenoise = !g_program.preDenoise;

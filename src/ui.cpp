@@ -38,6 +38,8 @@ static void drawRenderSettings(void)
     changed |= ImGui::Checkbox("Sky enabled", &g_program.skyEnabled);
     changed |= ImGui::Checkbox("Debug mode (show normals)", &g_program.debugmode);
     changed |= ImGui::SliderFloat("Sun strength", &g_program.sunStrength, 0.0f, 100.0f);
+    changed |= ImGui::SliderInt("Samples per Pixel", &g_program.samples, 1, 10);
+    changed |= ImGui::SliderInt("Max Bounces", &g_program.maxBounces, 1, 10);
  
     int tod = g_program.timeOfDay;
     if (ImGui::SliderInt("Time of day", &tod, 0, 1440))
@@ -53,7 +55,6 @@ static void drawRenderSettings(void)
     ImGui::Checkbox("Denoise", &g_program.enableDenoise);
     ImGui::Checkbox("Adaptive denoising", &g_program.adaptiveDenoising);
     ImGui::Checkbox("Pre-denoise clamp", &g_program.preDenoise);
-    ImGui::Checkbox("Print samples/s to console", &g_program.printFPS);
 }
 
 static void drawMaterialEditor(void)
@@ -86,13 +87,37 @@ static void drawInfo(void)
     static float deltaHistory[120] = {0.0f};
     static int deltaOffset = 0;
 
+    static float fpsTimer = 0.0f;
+    static int fpsFrameCount = 0;
+    static float avgFps = 0.0f;
+
     deltaHistory[deltaOffset] = g_program.deltaTime * 1000.0f;
     deltaOffset = (deltaOffset + 1) % IM_ARRAYSIZE(deltaHistory);
 
-    if (!ImGui::CollapsingHeader("Info")) {return;}
+    fpsTimer += g_program.deltaTime;
+    fpsFrameCount++;
+    if (fpsTimer >= 1.0f)
+    {
+        avgFps = (float)fpsFrameCount / fpsTimer;
+        fpsTimer = 0.0f;
+        fpsFrameCount = 0;
+    }
+
+    if (!ImGui::CollapsingHeader("Info", ImGuiTreeNodeFlags_DefaultOpen)) { return; }
+
+    if (ImGui::Button("Reset Camera"))
+    {
+        g_program.camera.x = 0.0f;
+        g_program.camera.y = 0.0f;
+        g_program.camera.z = 200.0f;
+        g_program.camera.yaw = -90.0f;
+        g_program.camera.pitch = 0.0f;
+
+        g_program.frameCount = 0;
+    }
 
     ImGui::Text("Frame: %d", g_program.frameCount);
-    ImGui::Text("Delta: %.2f ms", g_program.deltaTime * 1000.0f);
+    ImGui::Text("FPS: %.1f", avgFps);
     ImGui::Text("Camera: %.2f, %.2f, %.2f", g_program.camera.x, g_program.camera.y, g_program.camera.z);
     ImGui::Text("Yaw/Pitch: %.1f / %.1f", g_program.camera.yaw, g_program.camera.pitch);
 

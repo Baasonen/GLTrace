@@ -1,9 +1,6 @@
 #version 460 core
 
-#define MAX_BOUNCES  7
-#define SAMPLES_PER_PIXEL 1
-
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(rgba32f, binding = 0) uniform image2D img_output;
 layout(rgba32f, binding = 1) uniform image2D img_normals;
@@ -71,6 +68,9 @@ uniform int u_debugMode;
 uniform int u_renderBothSides;
 uniform float u_sunStrength;
 uniform int u_nee;
+
+uniform int u_samples;
+uniform int u_maxBounces;
 
 uniform vec3 u_camForward;
 uniform vec3 u_camRight;
@@ -194,7 +194,7 @@ void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay,
     }
 
     // Triangle
-    int stack[64];
+    int stack[32];
     int stackPtr = 0;   
     stack[stackPtr++] = 0;
 
@@ -276,7 +276,7 @@ bool castShadowRay(vec3 ro, vec3 rd)
     }
 
     // Triangles
-    int stack[64];
+    int stack[32];
     int stackPtr = 0;
     stack[stackPtr++] = 0;
 
@@ -340,15 +340,12 @@ void main()
     float fov = 45.0;
     float tanFov = tan(radians(fov) * 0.5);
 
-    const int maxBounces = MAX_BOUNCES;
-    const int samplesPerPixel = SAMPLES_PER_PIXEL;
-
     // Recursive raytracing
     vec3 frameColor = vec3(0.0, 0.0, 0.0);
     vec4 firstNormal = vec4(0.0);
     float firstRoughness = 1.0;
 
-    for (int s = 0; s < samplesPerPixel; s++)
+    for (int s = 0; s < u_samples; s++)
     {
         uint sampleSeed = seed + uint(s) * 9781u;
 
@@ -362,8 +359,9 @@ void main()
         vec3 throughput = vec3(1.0, 1.0, 1.0);
         vec3 currentRo = u_cameraPos;
         vec3 currentRd = rd;
+        bool lastWasDiffuse = false;
 
-        for (int bounce = 0; bounce < maxBounces; bounce++)
+        for (int bounce = 0; bounce < u_maxBounces; bounce++)
         {
             float minT;
             int hitIndex;
@@ -434,6 +432,7 @@ void main()
 
                 if (random(sampleSeed) > material.opacity)
                 {   
+                    lastWasDiffuse = false;
                     float baseIOR = 1.5;
                     float dispersion = 0.012;
 
@@ -528,11 +527,15 @@ void main()
 
                         currentRd = normalize(mix(reflectDir, cosHemisphere(normal, sampleSeed), material.roughness * material.roughness));
                         throughput *= mix(vec3(1.0, 1.0, 1.0), material.color.rgb, material.metallic);
+                    
+                        lastWasDiffuse = false;
                     }
                     else
                     {
                         currentRd = cosHemisphere(normal, sampleSeed);
                         throughput *= material.color.rgb;
+
+                        lastWasDiffuse = true;
                     }
 
                     currentRo = hitPos + normal * 0.001;
@@ -594,7 +597,9 @@ void main()
 
                 skyColor += horizonGlow * vec3(1.0, 0.5, 0.2);
 
-                if (sunDot > sunDiameter) 
+                bool killSunDisc = (u_nee == 1) && lastWasDiffuse;
+
+                if (!killSunDisc && sunDot > sunDiameter) 
                 { 
                     skyColor += sunColor * 2.0; 
                 } 
@@ -620,7 +625,7 @@ void main()
         else {frameColor = firstNormal.rgb;}
     }
     
-    frameColor /= float(samplesPerPixel);
+    frameColor /= float(u_samples);
 
     vec2 texUV = (vec2(pixelCoord) + 0.5) / u_resolution; 
     vec3 prevColor = texture(u_historyTexture, texUV).rgb;
