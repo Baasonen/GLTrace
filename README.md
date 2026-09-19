@@ -1,22 +1,45 @@
 # GLTrace
-<img width="1906" height="935" alt="image" src="https://github.com/user-attachments/assets/a490647b-d890-488c-8303-616e1ce1fbcf" />
+<img width="2821" height="1388" alt="image" src="https://github.com/user-attachments/assets/f281a533-4236-4fc5-9e73-908ff5b57697" />
+[1][3]
+
 
 
 
 ***
-Path tracer written in **C** using **OpenGL 4.6** with support for meshes with SAH BVH acceleration and PBR material system.
+Path tracer written in C using OpenGL 4.6 with support for meshes, SAH BVH acceleration and PBR material system.
 *** 
 ### Running
-- Makefile and dependencies included
+- Make sure to include ImGUI (git clone --recursive)
+- Run makefile (make)
 - Scene to load given as argument (default 1.scene)
 
-***NOTE: Vsync disabled by default to increase throughput***
 ***
 
 **Models are not my own, find them from: models/download_links.txt**
+***
+<img width="2944" height="1272" alt="image" src="https://github.com/user-attachments/assets/c355a0ef-5346-4e38-87b1-df16e77b976e" />
+
+[1]
+***
 
 <img width="1769" height="1195" alt="image" src="https://github.com/user-attachments/assets/9cecd0c7-458c-49ea-a9e5-1df92e7db3dd" />
-<img width="2116" height="1343" alt="Näyttökuva 2026-06-26 223412" src="https://github.com/user-attachments/assets/2113bc02-b315-4e25-87b6-b418fec15fa2" />
-<img width="3439" height="1176" alt="Näyttökuva 2026-06-26 225049" src="https://github.com/user-attachments/assets/385b28a2-4188-4683-9dd9-a8f0c69c49db" />
 
+***
 
+<img width="2116" height="1343" alt="image" src="https://github.com/user-attachments/assets/2113bc02-b315-4e25-87b6-b418fec15fa2" />
+
+[2]
+***
+
+<img width="2314" height="1395" alt="image" src="https://github.com/user-attachments/assets/d9c46ad9-a5f0-4332-91cd-71ef1e2f2850" />
+
+[1]
+***
+
+### Model Credits
+
+[1] saz88 / CGTrader  [“Mountainous Terrain – 8k – Includes Element3d version”](https://www.cgtrader.com/items/886557/download-page)
+
+[2] herminio / Free3d  ["Sci-Fi Downtown City"](https://free3d.com/3d-model/sci-fi-downtown-city-53758.html)
+
+[3] misterdevious / SketchFab ["cemetery angel - Leubner"](https://skfb.ly/VQYW)
