@@ -18,6 +18,7 @@ GPUTextures g_gpuTextures = {
 };
 
 MaterialEditorState g_matEditor = {0};
+SphereEditorState g_sphereEditor = {0};
 
 void uploadMaterial(int idx)
 {
@@ -33,6 +34,19 @@ void uploadMaterial(int idx)
     g_program.frameCount = 0;
 }
 
+void uploadSphere(int idx)
+{
+    if (idx < 0 || idx >= g_sphereEditor.sphereCount) {return;}
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_ssbo.ssboSpheres);
+
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER,
+                    sizeof(Sphere) * idx,
+                    sizeof(Sphere),
+                    &g_sphereEditor.spheres[idx]);
+
+    g_program.frameCount = 0;
+}
 
 void setupSSBO(void)
 {

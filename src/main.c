@@ -101,6 +101,10 @@ int main(int argc, char* argv[])
     g_matEditor.matCount = scene.materialCount;
     g_matEditor.selected = 0;
 
+    g_sphereEditor.spheres = scene.spheres;
+    g_sphereEditor.sphereCount = scene.sphereCount;
+    g_sphereEditor.selected = 0;
+
     setupSceneData(g_ssbo, &scene);
 
     GLuint computeProgram = createComputeProgram("shaders/raytrace.comp");
@@ -315,6 +319,7 @@ int main(int argc, char* argv[])
     glDeleteBuffers(1, &g_ssbo.ssboVertices);
     glDeleteBuffers(1, &g_ssbo.ssboMaterials);
     glDeleteBuffers(1, &g_ssbo.ssboTriangleMaterial);
+    glDeleteBuffers(1, &g_ssbo.ssboSpheres);
 
     glDeleteTextures(1, &g_gpuTextures.accumTexture);
     glDeleteTextures(1, &g_gpuTextures.outputTexture);

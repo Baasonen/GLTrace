@@ -81,6 +81,33 @@ static void drawMaterialEditor(void)
  
     if (changed) {uploadMaterial(g_matEditor.selected);}
 }
+
+static void drawSphereEditor(void)
+{
+    if (!ImGui::CollapsingHeader("Spheres", ImGuiTreeNodeFlags_DefaultOpen)) {return;}
+
+    if (g_sphereEditor.sphereCount <= 0)
+    {
+        ImGui::TextDisabled("No spheres in scene.");
+        return;
+    }
+
+    ImGui::SliderInt("Sphere", &g_sphereEditor.selected, 0, g_sphereEditor.sphereCount - 1);
+
+    Sphere* s = &g_sphereEditor.spheres[g_sphereEditor.selected];
+    bool changed = false;
+
+    changed |= ImGui::DragFloat3("Position", &s->px, 0.5f);
+
+    float diameter = s->radius * 2.0f;
+    if (ImGui::DragFloat("Diameter", &diameter, 0.5f, 0.01f, 10000.0f))
+    {
+        s->radius = diameter * 0.5f;
+        changed = true;
+    }
+
+    if (changed) {uploadSphere(g_sphereEditor.selected);}
+}
  
 static void drawInfo(void)
 {
@@ -138,6 +165,7 @@ void UIDraw(void)
 
     drawRenderSettings();
     drawMaterialEditor();
+    drawSphereEditor();
     drawInfo();
 
     ImGui::End();

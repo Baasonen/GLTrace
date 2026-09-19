@@ -117,7 +117,7 @@ void setupSceneData(SSBOS ssbo, SceneDescription* sceneDesc)
 
     if (sceneDesc->sphereCount > 0)
     {
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Sphere) * sceneDesc->sphereCount, sceneDesc->spheres, GL_STATIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Sphere) * sceneDesc->sphereCount, sceneDesc->spheres, GL_DYNAMIC_DRAW);
     }
     else
     {

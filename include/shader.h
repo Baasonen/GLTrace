@@ -54,9 +54,19 @@ typedef struct
     int selected;
 } MaterialEditorState;
 
+typedef struct 
+{
+    Sphere* spheres;
+
+    int sphereCount;
+    int selected;
+} SphereEditorState;
+
 extern MaterialEditorState g_matEditor;
+extern SphereEditorState g_sphereEditor;
 
 void uploadMaterial(int idx);
+void uploadSphere(int idx);
 
 #ifdef __cplusplus
 }
