@@ -84,7 +84,7 @@ static void drawMaterialEditor(void)
 
 static void drawSphereEditor(void)
 {
-    if (!ImGui::CollapsingHeader("Spheres", ImGuiTreeNodeFlags_DefaultOpen)) {return;}
+    if (!ImGui::CollapsingHeader("Spheres")) {return;}
 
     if (g_sphereEditor.sphereCount <= 0)
     {

@@ -1,6 +1,7 @@
 #include "scene_builder.h"
 
 #include "bvh.h"
+#include "mouse_select.h"
 
 MeshData buildSceneMesh(SceneDescription* scene)
 {
@@ -109,8 +110,7 @@ void setupSceneData(SSBOS ssbo, SceneDescription* sceneDesc)
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Material) * sceneDesc->materialCount, sceneDesc->materials, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo.ssboMaterials);
 
-    free(bvh.nodes);
-    freeMeshData(&sceneMesh);
+    selSceneSet(bvh.nodes, bvh.nodeCount, &sceneMesh);
 
     // Sphere data
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo.ssboSpheres);

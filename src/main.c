@@ -20,6 +20,7 @@
 #include "config.h"
 #include "input.h"
 #include "ui.h"
+#include "mouse_select.h"
 
 #ifdef _WIN32
 __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
@@ -181,6 +182,51 @@ int main(int argc, char* argv[])
         vec3 trueUp = vec3Cross(right, forward);
         trueUp = vec3Normalize(trueUp);
 
+        // Mouse select
+        static bool pickWasDown = false;
+        bool pickDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+
+        if (pickDown && !pickWasDown)
+        {
+            float ndcX = 0.0f;
+            float ndcY = 0.0f;
+
+            if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
+            {
+                double cx; 
+                double cy;
+
+                int ww;
+                int wh;
+
+                glfwGetCursorPos(window, &cx, &cy);
+                glfwGetWindowSize(window, &ww, &wh);
+
+                ndcX = (float)(cx / ww) * 2.0f - 1.0f;
+                ndcY = 1.0f - (float)(cy / wh) * 2.0f;  
+            }
+
+            float aspect = (float)g_program.newWidth / (float)g_program.newHeight;
+            float tanFov = tanf((float)radians(45.0f) * 0.5f);  
+
+            vec3 ro = vec3Make(g_program.camera.x, g_program.camera.y, g_program.camera.z);
+            vec3 rd = vec3Make(
+                forward.x + ndcX * aspect * tanFov * right.x + ndcY * tanFov * trueUp.x,
+                forward.y + ndcX * aspect * tanFov * right.y + ndcY * tanFov * trueUp.y,
+                forward.z + ndcX * aspect * tanFov * right.z + ndcY * tanFov * trueUp.z);
+
+            SelResult sel = selRay(ro, rd, g_program.renderBothSides);
+
+            if (sel.type != SEL_NONE && sel.matIdx < g_matEditor.matCount)
+            {
+                g_matEditor.selected = sel.matIdx;
+                if (sel.type == SEL_SPHERE) {g_sphereEditor.selected = sel.idx;}
+
+                printf("Picked %s %d, material %d\n", sel.type == SEL_SPHERE ? "sphere" : "triangle", sel.idx, sel.matIdx);
+            }
+        }
+        pickWasDown = pickDown;
+
         glUseProgram(computeProgram);
 
         glUniform1i(loc_renderBothSides, g_program.renderBothSides);
@@ -330,6 +376,7 @@ int main(int argc, char* argv[])
     glDeleteTextures(1, &g_gpuTextures.denoisePreTexture);
     glDeleteVertexArrays(1, &vao);
 
+    selSceneFree();
     UIShutdown();
 
     glFinish();
