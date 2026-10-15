@@ -7,6 +7,7 @@
 
 #include "state.h"
 #include "shader.h"
+#include "plane_light.h"
 
 void UIInit(GLFWwindow* window)
 {
@@ -109,6 +110,58 @@ static void drawSphereEditor(void)
     if (changed) {uploadSphere(g_sphereEditor.selected);}
 }
  
+static void drawPlaneLightEditor(void)
+{
+    if (!ImGui::CollapsingHeader("Plane Lights")) {return;}
+
+    PLSystem* sys = &g_planeLights;
+
+    if (ImGui::Button("Add"))
+    {
+        plAdd(vec3Make(g_program.camera.x, g_program.camera.y + 20.0f, g_program.camera.z));
+    }
+ 
+    ImGui::SameLine();
+ 
+    if (ImGui::Button("Remove") && sys->count > 0)
+    {
+        plRemove(sys->selected);
+        sys->needSelect = false;
+    }
+ 
+    if (sys->count <= 0)
+    {
+        ImGui::TextDisabled("No plane lights in scene.");
+        return;
+    }
+ 
+    ImGui::SliderInt("Light", &sys->selected, 0, sys->count - 1);
+ 
+    PlaneLight* l = &sys->lights[sys->selected];
+    bool changed = false;
+ 
+    changed |= ImGui::DragFloat3("Position##pl", &l->px, 0.5f);
+    changed |= ImGui::ColorEdit3("Color##pl", &l->cr);
+    changed |= ImGui::DragFloat("Intensity##pl", &l->intensity, 0.1f, 0.0f, 10000.0f);
+    changed |= ImGui::DragFloat("Width##pl", &l->width, 0.5f, 0.01f, 10000.0f);
+    changed |= ImGui::DragFloat("Height##pl", &l->height, 0.5f, 0.01f, 10000.0f);
+ 
+    if (changed) {plUpload();}
+ 
+    ImGui::Text("Facing: %.2f, %.2f, %.2f", l->nx, l->ny, l->nz);
+ 
+    if (ImGui::Button("Flip")) {plFlip(sys->selected);}
+ 
+    ImGui::SameLine();
+ 
+    if (ImGui::Button(sys->needSelect ? "Click a surface... (cancel)" : "Aim at clicked point"))
+    {
+        sys->needSelect = !sys->needSelect;
+    }
+ 
+    ImGui::TextDisabled("Middle-click a light to select it.");
+}
+
 static void drawInfo(void)
 {
     static float deltaHistory[120] = {0.0f};
@@ -166,6 +219,8 @@ void UIDraw(void)
     drawRenderSettings();
     drawMaterialEditor();
     drawSphereEditor();
+    drawPlaneLightEditor();
+
     drawInfo();
 
     ImGui::End();

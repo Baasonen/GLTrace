@@ -4,6 +4,7 @@
 #include <bvec/bvec.h>
 
 #include "obj_loader.h"
+#include "plane_light.h"
 
 typedef struct 
 {
@@ -45,6 +46,9 @@ typedef struct
 
     Sphere* spheres;
     int sphereCount;
+
+    PlaneLight* planeLights;
+    int planeLightCount;
 } SceneDescription;
 
 #endif

@@ -21,6 +21,7 @@
 #include "input.h"
 #include "ui.h"
 #include "mouse_select.h"
+#include "plane_light.h"
 
 #ifdef _WIN32
 __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
@@ -108,6 +109,9 @@ int main(int argc, char* argv[])
 
     setupSceneData(g_ssbo, &scene);
 
+    plInit();
+    plLoad(scene.planeLights, scene.planeLightCount);
+
     GLuint computeProgram = createComputeProgram("shaders/raytrace.comp");
     GLuint displayProgram = createShaderProgram();
     GLuint denoiseProgram = createComputeProgram("shaders/denoise.comp");
@@ -165,7 +169,8 @@ int main(int argc, char* argv[])
         }
 
         bool cameraMoved = processInput(window);
-        if (cameraMoved) {g_program.frameCount = 0;}
+        bool lightsChanged = plDirty();
+        if (cameraMoved || lightsChanged) {g_program.frameCount = 0;}
         g_program.frameCount++;
 
         vec3 forward = vec3Zero();
@@ -217,7 +222,27 @@ int main(int argc, char* argv[])
 
             SelResult sel = selRay(ro, rd, g_program.renderBothSides);
 
-            if (sel.type != SEL_NONE && sel.matIdx < g_matEditor.matCount)
+            vec3 rdN = vec3Normalize(rd);
+            float lightLimit = (sel.type != SEL_NONE) ? sel.t : 1e20f;
+            int lightIdx = -1;
+            float lightT = 0.0f;
+
+            if (g_planeLights.needSelect)
+            {
+                if (sel.type != SEL_NONE)
+                {
+                    vec3 target = vec3Make(ro.x + rdN.x * sel.t, ro.y + rdN.y * sel.t, ro.z + rdN.z * sel.t);
+                    plAim(g_planeLights.selected, target);
+
+                    g_planeLights.needSelect = false;
+                }
+            }
+            else if (plSelect(ro, rdN, lightLimit, &lightIdx, &lightT))
+            {
+                g_planeLights.selected = lightIdx;
+                printf("Picked plane light %d\n", lightIdx);
+            }
+            else if (sel.type != SEL_NONE && sel.matIdx < g_matEditor.matCount)
             {
                 g_matEditor.selected = sel.matIdx;
                 if (sel.type == SEL_SPHERE) {g_sphereEditor.selected = sel.idx;}
@@ -228,6 +253,8 @@ int main(int argc, char* argv[])
         pickWasDown = pickDown;
 
         glUseProgram(computeProgram);
+
+        plBindUniforms(computeProgram);
 
         glUniform1i(loc_renderBothSides, g_program.renderBothSides);
         glUniform1i(loc_debugMode, g_program.debugmode);
@@ -378,6 +405,7 @@ int main(int argc, char* argv[])
 
     selSceneFree();
     UIShutdown();
+    plShutdown();
 
     glFinish();
     glfwTerminate();

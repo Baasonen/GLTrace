@@ -25,6 +25,7 @@ void freeScene(SceneDescription* scene)
     free(scene->materials);
     free(scene->meshInstances);
     free(scene->spheres);
+    free(scene->planeLights);
 
     zeroScene(scene);
 }
@@ -173,6 +174,40 @@ int loadScene(const char* scenePath, SceneDescription* scene)
             s->padding[0] = 1.0f;
             s->padding[1] = 1.0f;
             s->padding[2] = 1.0f;
+        }
+    }
+
+    if (fscanf(file, "%d", &scene->planeLightCount) != 1 || scene->planeLightCount <= 0)
+    {
+        scene->planeLightCount = 0;
+    }
+    else
+    {
+        if (scene->planeLightCount > PL_MAX) {scene->planeLightCount = PL_MAX;}
+ 
+        scene->planeLights = calloc(scene->planeLightCount, sizeof(PlaneLight));
+        if (!scene->planeLights)
+        {
+            freeScene(scene);
+            fclose(file);
+            return 0;
+        }
+ 
+        for (int i = 0; i < scene->planeLightCount; i++)
+        {
+            PlaneLight* l = &scene->planeLights[i];
+            if (fscanf(file, "%f %f %f %f %f %f %f %f %f %f %f %f",
+                       &l->px, &l->py, &l->pz,
+                       &l->nx, &l->ny, &l->nz,
+                       &l->width, &l->height,
+                       &l->cr, &l->cg, &l->cb,
+                       &l->intensity) != 12)
+            {
+                fprintf(stderr, "Failed to read plane light %d\n", i);
+                freeScene(scene);
+                fclose(file);
+                return 0;
+            }
         }
     }
 

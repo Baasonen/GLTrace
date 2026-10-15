@@ -39,6 +39,16 @@ struct BVHNode
     uint triCount;
 };
 
+struct PlaneLight
+{
+    vec3 pos;
+    float intensity;
+    vec3 normal;
+    float width;
+    vec3 color;
+    float height;
+};
+
 struct hitResult
 {
     float t;
@@ -54,6 +64,9 @@ layout(std430, binding = 2) buffer VertexData {Vertex vertices[];};
 layout(std430, binding = 3) buffer IndexData {uint indices[];};
 layout(std430, binding = 4) buffer BVHData {BVHNode bvhNodes[];};
 layout(std430, binding = 5) buffer TriangleMaterialData {uint triangleMaterials[];};
+layout(std430, binding = 6) buffer PlaneLightData {PlaneLight planeLights[];};
+
+uniform int u_planeLightCount;
 
 uniform vec2 u_resolution;
 uniform int u_frameCount;
@@ -166,6 +179,34 @@ float hitSphere(Sphere s, vec3 ro, vec3 rd)
     return (h < 0.0) ? -1.0 : (-b - sqrt(h));
 }
 
+void planeBasis(vec3 n, out vec3 tangent, out vec3 bitangent)
+{
+    vec3 up = abs(n.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    tangent = normalize(cross(up, n));
+    bitangent = cross(n, tangent);
+}
+
+float hitPlaneLight(int idx, vec3 ro, vec3 rd)
+{
+    vec3 n = planeLights[idx].normal;
+    vec3 pos = planeLights[idx].pos;
+
+    float denom = dot(n, rd);
+    if (abs(denom) < 1e-6) {return -1.0;}
+
+    float t = dot(pos - ro, n) / denom;
+    if (t <= 0.001) {return -1.0;}
+
+    vec3 tangent, bitangent;
+    planeBasis(n, tangent, bitangent);
+
+    vec3 p = ro + rd * t - pos;
+    if (abs(dot(p, tangent)) > 0.5 * planeLights[idx].width) {return -1.0;}
+    if (abs(dot(p, bitangent)) > 0.5 * planeLights[idx].height) {return -1.0;}
+
+    return t;
+}
+
 void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay, 
                     out float minT, out int hitIndex, out int hitType,
                     out float baryU, out float baryV)
@@ -190,6 +231,18 @@ void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay,
             minT = t;
             hitIndex = i;
             hitType = 1;
+        }
+    }
+
+    // Plane lights 
+    for (int i = 0; i < u_planeLightCount; i++)
+    {
+        float t = hitPlaneLight(i, ro, rd);
+        if (t > 0.001 && t < minT)
+        {
+            minT = t;
+            hitIndex = i;
+            hitType = 3;
         }
     }
 
@@ -262,7 +315,7 @@ void getSunPos(out vec3 sunDir, out vec3 sunColor)
     sunColor = mix(mix(setSunColor, vec3(0.0), nightF), daySunColor, dayF) * 2.0;
 }
 
-bool castShadowRay(vec3 ro, vec3 rd)
+bool castShadowRay(vec3 ro, vec3 rd ,float maxT)
 {
     vec3 invDir = 1.0 / rd;
 
@@ -272,7 +325,14 @@ bool castShadowRay(vec3 ro, vec3 rd)
         if (materials[spheres[i].materialIndex].visibility > 0.5) {continue;}
 
         float t = hitSphere(spheres[i], ro, rd);
-        if (t > 0.001 && materials[spheres[i].materialIndex].opacity > 0.5) {return true;}
+        if (t > 0.001 && t < maxT && materials[spheres[i].materialIndex].opacity > 0.5) {return true;}
+    }
+
+    // Plane lights
+    for (int i = 0; i < u_planeLightCount; i++)
+    {
+        float t = hitPlaneLight(i, ro, rd);
+        if (t > 0.001 && t < maxT) {return true;}
     }
 
     // Triangles
@@ -285,7 +345,7 @@ bool castShadowRay(vec3 ro, vec3 rd)
         int nodeIdx = stack[--stackPtr];
         BVHNode node = bvhNodes[nodeIdx];
 
-        if (hitAABB(node.aabbMin, node.aabbMax, ro, invDir) >= 1e30) {continue;}
+        if (hitAABB(node.aabbMin, node.aabbMax, ro, invDir) >= maxT) {continue;}
 
         if (node.triCount > 0)
         {
@@ -297,7 +357,7 @@ bool castShadowRay(vec3 ro, vec3 rd)
                 if (materials[matIdx].opacity > 0.5)
                 {
                     hitResult hr = hitTriangleIndexed(triIdx, ro, rd);
-                    if (hr.t > 0.001) {return true;}
+                    if (hr.t > 0.001 && hr.t < maxT) {return true;}
                 }
             }
         }
@@ -311,13 +371,13 @@ bool castShadowRay(vec3 ro, vec3 rd)
 
             if (dL < dR)
             {
-                if (dR < 1e30) {stack[stackPtr++] = right;}
-                if (dL < 1e30) {stack[stackPtr++] = left;}
+                if (dR < maxT) {stack[stackPtr++] = right;}
+                if (dL < maxT) {stack[stackPtr++] = left;}
             }
             else
             {
-                if (dL < 1e30) {stack[stackPtr++] = left;}
-                if (dR < 1e30) {stack[stackPtr++] = right;}
+                if (dL < maxT) {stack[stackPtr++] = left;}
+                if (dR < maxT) {stack[stackPtr++] = right;}
             }
         }
     }
@@ -360,6 +420,7 @@ void main()
         vec3 currentRo = u_cameraPos;
         vec3 currentRd = rd;
         bool lastWasDiffuse = false;
+        float lastBsdfPdf = 1.0; 
 
         for (int bounce = 0; bounce < u_maxBounces; bounce++)
         {
@@ -378,6 +439,34 @@ void main()
             if (hitIndex != -1)
             {
                 vec3 hitPos = currentRo + currentRd * minT;
+
+                if (hitType == 3)
+                {
+                    vec3 pln = planeLights[hitIndex].normal;
+                    float cosL = dot(pln, -currentRd);
+
+                    if (firstHit)
+                    {
+                        firstNormal = vec4((cosL > 0.0 ? pln : -pln) * 0.5 + 0.5, minT);
+                        firstRoughness = 1.0;
+                    }
+
+                    if (cosL > 0.0)
+                    {
+                        float misW = 1.0;
+
+                        if (u_nee == 1 && lastWasDiffuse)
+                        {
+                            float pdfLight = (minT * minT) / (cosL * planeLights[hitIndex].width * planeLights[hitIndex].height * float(u_planeLightCount));
+                            float pb2 = lastBsdfPdf * lastBsdfPdf;
+                            misW = pb2 / (pb2 + pdfLight * pdfLight);
+                        }
+
+                        accumulatedLight += throughput * (planeLights[hitIndex].color * planeLights[hitIndex].intensity) * misW;
+                    }
+                    break;
+                }
+
                 vec3 normal;
                 vec3 geometricNormal;
                 int materialIndex;
@@ -489,33 +578,87 @@ void main()
                 {
                     float fresnel = 0.04 + (1.0 - 0.04) * pow(1.0 - max(dot(normal, -currentRd), 0.0), 5.0);
 
-                    if (u_skyEnabled == 1 && u_nee == 1)
+                    bool sunOn = (u_skyEnabled == 1 && u_nee == 1);
+                    bool lightOn = (u_nee == 1 && u_planeLightCount > 0);
+
+                    if (sunOn || lightOn)
                     {
-                        vec3 sunDir, sunColor;
-                        getSunPos(sunDir, sunColor);
+                        bool pickSun = sunOn && (!lightOn || random(sampleSeed) < 0.5);
+                        float pickProb = (sunOn && lightOn) ? 0.5 : 1.0;
 
-                        const float sunCosMax = 0.9998;
-                        const float sunSolidAngle = 2.0 * M_PI * (1.0 - sunCosMax);
+                        float diffuseWeight = 1.0 - mix(fresnel, 1.0, material.metallic);
+                        vec3 shadowOrigin = hitPos + normal * 0.001;
 
-                        float r1 = random(sampleSeed);
-                        float r2 = random(sampleSeed);
+                        vec3 L = vec3(0.0, 1.0, 0.0);
+                        float maxT = 1e30;
+                        vec3 neeWeight = vec3(0.0); // everything except throughput, 0 = invalid sample
 
-                        float cosT = 1.0 - r1 * (1.0 - sunCosMax);
-                        float sinT = sqrt(max(0.0, 1.0 - cosT * cosT));
-                        float phi = 2.0 * M_PI * r2;
-
-                        vec3 sunUp = abs(sunDir.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-                        vec3 sunTan = normalize(cross(sunUp, sunDir));
-                        vec3 sunBit = cross(sunDir, sunTan);
-                        vec3 shadowDir = normalize(sunTan * (cos(phi) * sinT) + sunBit * (sin(phi) * sinT) + sunDir * cosT);
-
-                        float NdL = max(dot(normal, shadowDir), 0.0);
-
-                        if (NdL > 0.0 && !castShadowRay(hitPos + normal * 0.001, shadowDir))
+                        if (pickSun)
                         {
-                            float diffuseWeight = 1.0 - mix(fresnel, 1.0, material.metallic);
+                            vec3 sunDir, sunColor;
+                            getSunPos(sunDir, sunColor);
 
-                            accumulatedLight += throughput * (material.color.rgb / M_PI) * sunColor * (NdL * sunSolidAngle * diffuseWeight * u_sunStrength);
+                            const float sunCosMax = 0.9998;
+                            const float sunSolidAngle = 2.0 * M_PI * (1.0 - sunCosMax);
+
+                            float r1 = random(sampleSeed);
+                            float r2 = random(sampleSeed);
+
+                            float cosT = 1.0 - r1 * (1.0 - sunCosMax);
+                            float sinT = sqrt(max(0.0, 1.0 - cosT * cosT));
+                            float phi = 2.0 * M_PI * r2;
+
+                            vec3 sunUp = abs(sunDir.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+                            vec3 sunTan = normalize(cross(sunUp, sunDir));
+                            vec3 sunBit = cross(sunDir, sunTan);
+                            L = normalize(sunTan * (cos(phi) * sinT) + sunBit * (sin(phi) * sinT) + sunDir * cosT);
+
+                            float NdL = max(dot(normal, L), 0.0);
+
+                            if (NdL > 0.0)
+                            {
+                                neeWeight = (material.color.rgb / M_PI) * sunColor
+                                          * (NdL * sunSolidAngle * diffuseWeight * u_sunStrength);
+                            }
+                        }
+                        else
+                        {
+                            int li = min(int(random(sampleSeed) * float(u_planeLightCount)), u_planeLightCount - 1);
+                            PlaneLight pl = planeLights[li];
+
+                            vec3 pln = pl.normal;
+                            vec3 plTan, plBitan;
+                            planeBasis(pln, plTan, plBitan);
+
+                            float ru = random(sampleSeed);
+                            float rv = random(sampleSeed);
+
+                            vec3 samplePos = pl.pos + plTan * ((ru - 0.5) * pl.width) + plBitan * ((rv - 0.5) * pl.height);
+
+                            vec3 toLight = samplePos - shadowOrigin;
+                            float dist2 = dot(toLight, toLight);
+                            float dist = sqrt(dist2);
+                            L = toLight / max(dist, 1e-6);
+
+                            float NdL = dot(normal, L);
+                            float cosL = dot(pln, -L);
+
+                            if (NdL > 0.0 && cosL > 1e-4 && dist > 1e-3)
+                            {
+                                maxT = dist - 0.002;
+
+                                float pdfLight = dist2 / (cosL * pl.width * pl.height * float(u_planeLightCount));
+                                float pdfBsdf = NdL / M_PI;
+                                float misW = (pdfLight * pdfLight) / (pdfLight * pdfLight + pdfBsdf * pdfBsdf);
+
+                                neeWeight = (material.color.rgb / M_PI) * (pl.color * pl.intensity)
+                                          * (NdL * diffuseWeight * misW / pdfLight);
+                            }
+                        }
+
+                        if (neeWeight != vec3(0.0) && !castShadowRay(shadowOrigin, L, maxT))
+                        {
+                            accumulatedLight += throughput * neeWeight / pickProb;
                         }
                     }
 
@@ -534,6 +677,8 @@ void main()
                     {
                         currentRd = cosHemisphere(normal, sampleSeed);
                         throughput *= material.color.rgb;
+
+                        lastBsdfPdf = max(dot(normal, currentRd), 1e-4) / M_PI;
 
                         lastWasDiffuse = true;
                     }
