@@ -1,6 +1,6 @@
 # GLTrace
-<img width="2821" height="1388" alt="image" src="https://github.com/user-attachments/assets/f281a533-4236-4fc5-9e73-908ff5b57697" />
-[1][3]
+<img width="2495" height="1070" alt="image" src="https://github.com/user-attachments/assets/5396cdaa-da59-4134-9c2d-2e08f0179061" />
+[3]
 
 
 
