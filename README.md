@@ -31,7 +31,8 @@ Path tracer written in C using OpenGL 4.6 with support for meshes, SAH BVH accel
 [2]
 ***
 
-<img width="2314" height="1395" alt="image" src="https://github.com/user-attachments/assets/d9c46ad9-a5f0-4332-91cd-71ef1e2f2850" />
+<img width="1604" height="962" alt="image" src="https://github.com/user-attachments/assets/20607298-f3b8-4e96-ba4d-c4c65027166d" />
+
 
 [1]
 ***
