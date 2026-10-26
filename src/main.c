@@ -113,16 +113,6 @@ int main(int argc, char* argv[])
     plInit();
     plLoad(scene.planeLights, scene.planeLightCount);
 
-    g_program.hdriStrength = 1.0f;
-
-    if (argc > 2)
-    {
-        char hdriPath[512];
-        snprintf(hdriPath, sizeof(hdriPath), "HDRI/%s.hdr", argv[2]);
-
-        if (hdriLoad(hdriPath)) {g_program.hdriEnabled = true;}
-    }
-
     GLuint computeProgram = createComputeProgram("shaders/raytrace.comp");
     GLuint displayProgram = createShaderProgram();
     GLuint denoiseProgram = createComputeProgram("shaders/denoise.comp");

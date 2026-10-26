@@ -1,9 +1,15 @@
 #version 460 core
 
+
+//LAYOUTS AND OUTPUTS
+
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(rgba32f, binding = 0) uniform image2D img_output;
 layout(rgba32f, binding = 1) uniform image2D img_normals;
+
+
+//STRUCTURES
 
 struct Sphere 
 {
@@ -56,6 +62,9 @@ struct hitResult
     float baryV;
 };
 
+
+//BUFFERS AND UNIFORMS
+
 const float M_PI = 3.1415926;
 
 layout(std430, binding = 0) buffer SceneData {Sphere spheres[];};
@@ -65,6 +74,7 @@ layout(std430, binding = 3) buffer IndexData {uint indices[];};
 layout(std430, binding = 4) buffer BVHData {BVHNode bvhNodes[];};
 layout(std430, binding = 5) buffer TriangleMaterialData {uint triangleMaterials[];};
 layout(std430, binding = 6) buffer PlaneLightData {PlaneLight planeLights[];};
+layout(std430, binding = 7) buffer HdriData {float hdriCDF[];};
 
 uniform int u_planeLightCount;
 
@@ -86,6 +96,7 @@ layout(binding = 1) uniform sampler2D u_hdriTexture;
 uniform int u_hdriEnabled;
 uniform float u_hdriStrength;
 uniform float u_hdriRotation;
+uniform ivec2 u_hdriSize;
 
 uniform int u_samples;
 uniform int u_maxBounces;
@@ -93,6 +104,9 @@ uniform int u_maxBounces;
 uniform vec3 u_camForward;
 uniform vec3 u_camRight;
 uniform vec3 u_camUp;
+
+
+//UTILITIES AND RANDOM
 
 uint pcgHash(inout uint state)
 {
@@ -124,9 +138,11 @@ vec3 cosHemisphere(vec3 n, inout uint seed)
     return tangent * localRay.x + biTangent * localRay.y + n * localRay.z;
 }
 
+
+//INTERSECTION FUNCTIONS
+
 float hitAABB(vec3 aabbMin, vec3 aabbMax, vec3 ro, vec3 invDir)
 {
-    
     vec3 t0s = (aabbMin - ro) * invDir;
     vec3 t1s = (aabbMax - ro) * invDir;
 
@@ -211,6 +227,9 @@ float hitPlaneLight(int idx, vec3 ro, vec3 rd)
 
     return t;
 }
+
+
+//SCENE TRAVERSAL
 
 void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay, 
                     out float minT, out int hitIndex, out int hitType,
@@ -305,6 +324,9 @@ void findClosestHit(vec3 ro, vec3 rd, vec3 invDir, bool primaryRay,
     }
 }
 
+
+//ENVIRONMENT AND LIGHTING
+
 void getSunPos(out vec3 sunDir, out vec3 sunColor)
 {
     float sunAngle = (u_timeOfDay - 360.0) / 1440.0 * 6.283185;
@@ -328,6 +350,67 @@ vec3 sampleHDRI(vec3 dir)
     vec2 uv = vec2(phi / (2.0 * M_PI) + 0.5, theta / M_PI);
     return textureLod(u_hdriTexture, uv, 0.0).rgb * u_hdriStrength;
 }
+
+int hdriFindInterval(int offset, int n, float u)
+{
+    int lo = 0;
+    int hi = n;
+
+    while(lo < hi - 1)
+    {
+        int m = (lo + hi) >> 1;
+        if (hdriCDF[offset + m] <= u) {lo = m;} else {hi = m;}
+    }
+
+    return lo;
+}
+
+vec3 sampleHDRIEnv(float r1, float r2, out float pdfOmega)
+{
+    int w = u_hdriSize.x;
+    int h = u_hdriSize.y;
+
+    int y = hdriFindInterval(0, h, r1);
+    float rowP = hdriCDF[y + 1] - hdriCDF[y];
+
+    int rowOff = (h + 1) + y * (w + 1);
+    int x = hdriFindInterval(rowOff, w, r2);
+    float colP = hdriCDF[rowOff + x + 1] - hdriCDF[rowOff + x];
+
+    float dy = (r1 - hdriCDF[y]) / max(rowP, 1e-10);
+    float dx = (r2 - hdriCDF[rowOff + x]) / max(colP, 1e-10);
+    vec2 uv = vec2((float(x) + dx) / float(w), (float(y) + dy) / float(h));
+
+    float theta = uv.y * M_PI;
+    float phi = (uv.x - 0.5) * 2.0 * M_PI - u_hdriRotation;
+    float sinT = sin(theta);
+
+    pdfOmega = rowP * colP * float(w * h) / (2.0 * M_PI * M_PI * max(sinT, 1e-5));
+    
+    return vec3(sinT * cos(phi), cos(theta), sinT * sin(phi));
+}
+
+float hdriPDF(vec3 dir)
+{
+    int w = u_hdriSize.x;
+    int h = u_hdriSize.y;
+
+    float phi = atan(dir.z, dir.x) + u_hdriRotation;
+    float theta = acos(clamp(dir.y, -1.0, 1.0));
+    vec2 uv = vec2(fract(phi / (2.0 * M_PI) + 0.5), theta / M_PI);
+
+    int x = clamp(int(uv.x * float(w)), 0, w - 1);
+    int y = clamp(int(uv.y * float(h)), 0, h - 1);
+
+    float rowP = hdriCDF[y + 1] - hdriCDF[y];
+    int rowOff = (h + 1) + y * (w + 1);
+    float colP = hdriCDF[rowOff + x + 1] - hdriCDF[rowOff + x];
+
+    return rowP * colP * float(w * h) / (2.0 * M_PI * M_PI * max(sin(theta), 1e-5));
+}
+
+
+//SHADOW RAY
 
 bool castShadowRay(vec3 ro, vec3 rd ,float maxT)
 {
@@ -398,15 +481,20 @@ bool castShadowRay(vec3 ro, vec3 rd ,float maxT)
     return false;
 }
 
+
+//MAIN PATH TRACER
+
 void main()
 {
+    //INIT
+    
     ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
 
     if (pixelCoord.x >= int(u_resolution.x) || pixelCoord.y >= int(u_resolution.y)) {return;}
 
     uint seed = uint(pixelCoord.x) + uint(pixelCoord.y) * uint(u_resolution.x) + uint(u_frameCount) * 7125413u;
 
-    // Camera
+    //CAMERA
     float aspect = u_resolution.x / u_resolution.y;
 
     vec3 ro = u_cameraPos;
@@ -414,11 +502,13 @@ void main()
     float fov = 45.0;
     float tanFov = tan(radians(fov) * 0.5);
 
-    // Recursive raytracing
     vec3 frameColor = vec3(0.0, 0.0, 0.0);
     vec4 firstNormal = vec4(0.0);
     float firstRoughness = 1.0;
 
+
+    //SAMPLING LOOP
+    
     for (int s = 0; s < u_samples; s++)
     {
         uint sampleSeed = seed + uint(s) * 9781u;
@@ -436,8 +526,13 @@ void main()
         bool lastWasDiffuse = false;
         float lastBsdfPdf = 1.0; 
 
+
+        //RAY BOUNCE EVALUATION
+        
         for (int bounce = 0; bounce < u_maxBounces; bounce++)
         {
+            //INTERSECTION
+            
             float minT;
             int hitIndex;
             int hitType;
@@ -454,6 +549,9 @@ void main()
             {
                 vec3 hitPos = currentRo + currentRd * minT;
 
+
+                //EMISSIVE HIT
+                
                 if (hitType == 3)
                 {
                     vec3 pln = planeLights[hitIndex].normal;
@@ -481,6 +579,9 @@ void main()
                     break;
                 }
 
+
+                //SURFACE DATA EVALUATION
+                
                 vec3 normal;
                 vec3 geometricNormal;
                 int materialIndex;
@@ -533,6 +634,9 @@ void main()
                     throughput *= exp(-absoption * minT);
                 }
 
+
+                //TRANSMISSION AND REFRACTION
+                
                 if (random(sampleSeed) > material.opacity)
                 {   
                     lastWasDiffuse = false;
@@ -590,15 +694,19 @@ void main()
                 }
                 else
                 {
+                    //NEE
+                    
                     float fresnel = 0.04 + (1.0 - 0.04) * pow(1.0 - max(dot(normal, -currentRd), 0.0), 5.0);
 
-                    bool sunOn = (u_skyEnabled == 1 && u_nee == 1);
-                    bool lightOn = (u_nee == 1 && u_planeLightCount > 0 && u_hdriEnabled == 0);
+                    bool sunOn = (u_skyEnabled == 1 && u_nee == 1 && u_hdriEnabled == 0);
+                    bool lightOn = (u_nee == 1 && u_planeLightCount > 0);
+                    bool envOn = (u_nee == 1 && u_hdriEnabled == 1);
+                    bool skyOn = sunOn || envOn;
 
-                    if (sunOn || lightOn)
+                    if (skyOn || lightOn)
                     {
-                        bool pickSun = sunOn && (!lightOn || random(sampleSeed) < 0.5);
-                        float pickProb = (sunOn && lightOn) ? 0.5 : 1.0;
+                        bool pickSky = skyOn && (!lightOn || random(sampleSeed) < 0.5);
+                        float pickProb = (skyOn && lightOn) ? 0.5 : 1.0;
 
                         float diffuseWeight = 1.0 - mix(fresnel, 1.0, material.metallic);
                         vec3 shadowOrigin = hitPos + normal * 0.001;
@@ -607,7 +715,7 @@ void main()
                         float maxT = 1e30;
                         vec3 neeWeight = vec3(0.0); // everything except throughput, 0 = invalid sample
 
-                        if (pickSun)
+                        if (pickSky && sunOn)
                         {
                             vec3 sunDir, sunColor;
                             getSunPos(sunDir, sunColor);
@@ -635,7 +743,27 @@ void main()
                                           * (NdL * sunSolidAngle * diffuseWeight * u_sunStrength);
                             }
                         }
-                        else
+                        else if (pickSky)
+                        {
+                            float r1 = random(sampleSeed);
+                            float r2 = random(sampleSeed);
+
+                            float pdfEnv;
+                            L = sampleHDRIEnv(r1, r2, pdfEnv);
+
+                            float NdL = dot(normal, L);
+
+                            if (NdL > 0.0 && pdfEnv > 0.0)
+                            {
+                                float pdfSel = pdfEnv * pickProb;  
+                                float pdfBsdf = NdL / M_PI;
+                                float misW = (pdfSel * pdfSel) / (pdfSel * pdfSel + pdfBsdf * pdfBsdf);
+
+                                neeWeight = (material.color.rgb / M_PI) * sampleHDRI(L)
+                                          * (NdL * diffuseWeight * misW / pdfEnv);
+                            }
+                        }
+                        else // plane light
                         {
                             int li = min(int(random(sampleSeed) * float(u_planeLightCount)), u_planeLightCount - 1);
                             PlaneLight pl = planeLights[li];
@@ -675,7 +803,8 @@ void main()
                             accumulatedLight += throughput * neeWeight / pickProb;
                         }
                     }
-
+                    //BSDF SCATTERING
+                    
                     bool isSpecular = random(sampleSeed) < mix(fresnel, 1.0, material.metallic);
 
                     if (isSpecular)
@@ -706,9 +835,10 @@ void main()
                     firstRoughness = materials[materialIndex].roughness;    
                 }
                 
+                //RUSSIAN ROULETTE
+                
                 if (bounce > 2)
                 {
-                    // Russian roulette
                     float p = max(throughput.r, max(throughput.g, throughput.b));
                     p = min(p, 1.0);
     
@@ -789,6 +919,9 @@ void main()
         if (u_debugMode == 0) {frameColor += accumulatedLight;}
         else {frameColor = firstNormal.rgb;}
     }
+    
+
+    //TEMPORAL ACCUMULATION AND OUTPUT
     
     frameColor /= float(u_samples);
 

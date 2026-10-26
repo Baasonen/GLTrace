@@ -11,6 +11,11 @@ extern "C" {
 typedef struct
 {
     GLuint texture;
+
+    GLuint ssboCDF;
+    int width;
+    int height;
+
     bool loaded;
 } HDRI;
 

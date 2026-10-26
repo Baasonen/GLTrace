@@ -5,10 +5,42 @@
 #include <imgui_impl_opengl3.h>
 #include <stdio.h>
 
+#include <filesystem>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cctype>
+
 #include "state.h"
 #include "shader.h"
 #include "plane_light.h"
 #include "hdri.h"
+
+namespace fs = std::filesystem;
+
+static std::vector<std::string> hdriFiles;
+static std::string hdriCurrent;
+static bool hdriScanned = false;
+
+static void scanHdri(void)
+{
+    hdriFiles.clear();
+
+    std::error_code e;
+    for (const auto& entry : fs::directory_iterator("HDRI", e))
+    {
+        if (!entry.is_regular_file()) {continue;}
+
+        std::string extension = entry.path().extension().string();
+
+        std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {return (char)std::tolower(c);});
+        
+        if (extension == ".hdr") {hdriFiles.push_back(entry.path().stem().string());}
+    }
+
+    std::sort(hdriFiles.begin(), hdriFiles.end());
+    hdriScanned = true;
+}
 
 void UIInit(GLFWwindow* window)
 {
@@ -63,13 +95,45 @@ static void drawHdriSettings(void)
 {
     if (!ImGui::CollapsingHeader("HDRI")) {return;}
 
+    if (!hdriScanned) {scanHdri();}
+
+    bool changed = false;
+
+    const char* preview = hdriCurrent.empty() ? "None" : hdriCurrent.c_str();
+
+    if (ImGui::BeginCombo("Environment", preview))
+    {
+        for (const std::string& name : hdriFiles)
+        {
+            bool isSelected = (name == hdriCurrent);
+
+            if (ImGui::Selectable(name.c_str(), isSelected) && !isSelected)
+            {
+                char path[512];
+                snprintf(path, sizeof(path), "HDRI/%s.hdr", name.c_str());
+
+                if (hdriLoad(path))
+                {
+                    hdriCurrent = name;
+                    g_program.hdriEnabled = true;
+                    changed = true;
+                }
+            }
+
+            if (isSelected) {ImGui::SetItemDefaultFocus();}
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Rescan")) {scanHdri();}
+
     if (!g_hdri.loaded)
     {
         ImGui::TextDisabled("No HDRI loaded");
+        if (changed) {g_program.frameCount = 0;}
         return;
     }
-
-    bool changed = false;
 
     changed |= ImGui::Checkbox("HDRI enabled", &g_program.hdriEnabled);
     changed |= ImGui::SliderFloat("HDRI strength", &g_program.hdriStrength, 0.0f, 10.0f);

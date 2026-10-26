@@ -36,4 +36,6 @@ State g_program = {
     .sunStrength = 100.0f,
     .preDenoise = true,
     .showMenu = true,
+
+    .hdriStrength = 1.0f,
 };
