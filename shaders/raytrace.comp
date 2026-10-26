@@ -82,6 +82,11 @@ uniform int u_renderBothSides;
 uniform float u_sunStrength;
 uniform int u_nee;
 
+layout(binding = 1) uniform sampler2D u_hdriTexture;
+uniform int u_hdriEnabled;
+uniform float u_hdriStrength;
+uniform float u_hdriRotation;
+
 uniform int u_samples;
 uniform int u_maxBounces;
 
@@ -313,6 +318,15 @@ void getSunPos(out vec3 sunDir, out vec3 sunColor)
     vec3 setSunColor = vec3(30.0, 10.0, 2.0);
 
     sunColor = mix(mix(setSunColor, vec3(0.0), nightF), daySunColor, dayF) * 2.0;
+}
+
+vec3 sampleHDRI(vec3 dir)
+{
+    float phi = atan(dir.z, dir.x) + u_hdriRotation;
+    float theta = acos(clamp(dir.y, -1.0, 1.0));
+
+    vec2 uv = vec2(phi / (2.0 * M_PI) + 0.5, theta / M_PI);
+    return textureLod(u_hdriTexture, uv, 0.0).rgb * u_hdriStrength;
 }
 
 bool castShadowRay(vec3 ro, vec3 rd ,float maxT)
@@ -579,7 +593,7 @@ void main()
                     float fresnel = 0.04 + (1.0 - 0.04) * pow(1.0 - max(dot(normal, -currentRd), 0.0), 5.0);
 
                     bool sunOn = (u_skyEnabled == 1 && u_nee == 1);
-                    bool lightOn = (u_nee == 1 && u_planeLightCount > 0);
+                    bool lightOn = (u_nee == 1 && u_planeLightCount > 0 && u_hdriEnabled == 0);
 
                     if (sunOn || lightOn)
                     {
@@ -704,6 +718,12 @@ void main()
             }
             else
             {
+                if (u_hdriEnabled == 1)
+                {
+                    accumulatedLight += throughput * sampleHDRI(currentRd);
+                    break;
+                }
+
                 vec3 skyColor = vec3(0.0);
                 float t = clamp(currentRd.y, -1.0, 1.0);
 

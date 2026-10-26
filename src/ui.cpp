@@ -8,6 +8,7 @@
 #include "state.h"
 #include "shader.h"
 #include "plane_light.h"
+#include "hdri.h"
 
 void UIInit(GLFWwindow* window)
 {
@@ -56,6 +57,25 @@ static void drawRenderSettings(void)
     ImGui::Checkbox("Denoise", &g_program.enableDenoise);
     ImGui::Checkbox("Adaptive denoising", &g_program.adaptiveDenoising);
     ImGui::Checkbox("Pre-denoise clamp", &g_program.preDenoise);
+}
+
+static void drawHdriSettings(void)
+{
+    if (!ImGui::CollapsingHeader("HDRI")) {return;}
+
+    if (!g_hdri.loaded)
+    {
+        ImGui::TextDisabled("No HDRI loaded");
+        return;
+    }
+
+    bool changed = false;
+
+    changed |= ImGui::Checkbox("HDRI enabled", &g_program.hdriEnabled);
+    changed |= ImGui::SliderFloat("HDRI strength", &g_program.hdriStrength, 0.0f, 10.0f);
+    changed |= ImGui::SliderFloat("HDRI rotation", &g_program.hdriRotation, 0.0f, 360.0f);
+
+    if (changed) {g_program.frameCount = 0;}
 }
 
 static void drawMaterialEditor(void)
@@ -217,6 +237,7 @@ void UIDraw(void)
     ImGui::Begin("GLTrace");
 
     drawRenderSettings();
+    drawHdriSettings();
     drawMaterialEditor();
     drawSphereEditor();
     drawPlaneLightEditor();

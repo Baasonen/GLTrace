@@ -44,6 +44,10 @@ typedef struct
     float sunStrength;
     bool preDenoise;
     bool showMenu;
+
+    bool hdriEnabled;
+    float hdriStrength;
+    float hdriRotation; 
 } State;
 
 extern State g_program;

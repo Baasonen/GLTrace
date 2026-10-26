@@ -22,6 +22,7 @@
 #include "ui.h"
 #include "mouse_select.h"
 #include "plane_light.h"
+#include "hdri.h"
 
 #ifdef _WIN32
 __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
@@ -112,6 +113,16 @@ int main(int argc, char* argv[])
     plInit();
     plLoad(scene.planeLights, scene.planeLightCount);
 
+    g_program.hdriStrength = 1.0f;
+
+    if (argc > 2)
+    {
+        char hdriPath[512];
+        snprintf(hdriPath, sizeof(hdriPath), "HDRI/%s.hdr", argv[2]);
+
+        if (hdriLoad(hdriPath)) {g_program.hdriEnabled = true;}
+    }
+
     GLuint computeProgram = createComputeProgram("shaders/raytrace.comp");
     GLuint displayProgram = createShaderProgram();
     GLuint denoiseProgram = createComputeProgram("shaders/denoise.comp");
@@ -189,7 +200,7 @@ int main(int argc, char* argv[])
 
         // Mouse select
         static bool pickWasDown = false;
-        bool pickDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+        bool pickDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
 
         if (pickDown && !pickWasDown)
         {
@@ -255,6 +266,7 @@ int main(int argc, char* argv[])
         glUseProgram(computeProgram);
 
         plBindUniforms(computeProgram);
+        hdriBindUniforms(computeProgram);
 
         glUniform1i(loc_renderBothSides, g_program.renderBothSides);
         glUniform1i(loc_debugMode, g_program.debugmode);
@@ -406,6 +418,7 @@ int main(int argc, char* argv[])
     selSceneFree();
     UIShutdown();
     plShutdown();
+    hdriShutdown();
 
     glFinish();
     glfwTerminate();
