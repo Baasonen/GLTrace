@@ -1,5 +1,7 @@
 # GLTrace
-<img width="2495" height="1070" alt="image" src="https://github.com/user-attachments/assets/5396cdaa-da59-4134-9c2d-2e08f0179061" />
+<img width="1752" height="845" alt="image" src="https://github.com/user-attachments/assets/3dae48db-4e75-4d0b-9644-3183c9e930f2" />
+
+
 [3]
 
 
@@ -7,15 +9,14 @@
 
 ***
 Path tracer written in C using OpenGL 4.6 with support for meshes, SAH BVH acceleration and PBR material system.
+
+Supports glTF and OBJ (only geometry) meshes
 *** 
 ### Running
-- Make sure to include ImGUI (git clone --recursive)
+- Make sure to include external libraries (git clone --recursive)
 - Run makefile (make)
 - Scene to load given as argument (default 1.scene)
 
-***
-
-**Models are not my own, find them from: models/download_links.txt**
 ***
 <img width="2944" height="1272" alt="image" src="https://github.com/user-attachments/assets/c355a0ef-5346-4e38-87b1-df16e77b976e" />
 
@@ -43,4 +44,4 @@ Path tracer written in C using OpenGL 4.6 with support for meshes, SAH BVH accel
 
 [2] herminio / Free3d  ["Sci-Fi Downtown City"](https://free3d.com/3d-model/sci-fi-downtown-city-53758.html)
 
-[3] misterdevious / SketchFab ["cemetery angel - Leubner"](https://skfb.ly/VQYW)
+[3] dark_igorek / SketchFab ["McLaren MP4/5"](https://skfb.ly/p8s7A)
