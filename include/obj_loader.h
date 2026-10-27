@@ -6,9 +6,9 @@
 typedef struct 
 {
     float x, y, z;
-    float padding;
+    float u;
     float nx, ny, nz;
-    float padding2;
+    float v;
 } GPUPackedVertex;
 
 typedef struct 

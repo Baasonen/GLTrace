@@ -56,6 +56,9 @@ MeshData buildSceneMesh(SceneDescription* scene)
             combinedMesh.vertices[vOffset + v].x = worldPos.x;
             combinedMesh.vertices[vOffset + v].y = worldPos.y;
             combinedMesh.vertices[vOffset + v].z = worldPos.z;
+
+            combinedMesh.vertices[vOffset + v].u = sourceMesh->vertices[v].u;
+            combinedMesh.vertices[vOffset + v].v = sourceMesh->vertices[v].v;
         }
         for (int idx = 0; idx < sourceMesh->indexCount; idx++)
         {

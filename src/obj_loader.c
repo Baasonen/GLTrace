@@ -10,9 +10,11 @@ void freeMeshData(MeshData* mesh)
 {
     if (mesh->vertices) free(mesh->vertices);
     if (mesh->indices) free(mesh->indices);
+    if (mesh->triangleMaterials) free(mesh->triangleMaterials);
 
     mesh->vertices = NULL;
     mesh->indices = NULL;
+    mesh->triangleMaterials = NULL;
     mesh->vertexCount = 0;
     mesh->indexCount = 0;
 }
@@ -24,7 +26,6 @@ void calculateMeshNormals(MeshData* mesh)
         mesh->vertices[i].nx = 0.0f;
         mesh->vertices[i].ny = 0.0f;
         mesh->vertices[i].nz = 0.0f;
-        mesh->vertices[i].padding2 = 0.0f;
     }
 
     for (int i = 0; i < mesh->indexCount; i += 3)
@@ -143,7 +144,8 @@ int loadObj(const char* filename, MeshData* mesh)
             mesh->vertices[vPtr].x = x;
             mesh->vertices[vPtr].y = y;
             mesh->vertices[vPtr].z = z;
-            mesh->vertices[vPtr].padding = 0.0f;
+            mesh->vertices[vPtr].u = 0.0f;
+            mesh->vertices[vPtr].v = 0.0f;
 
             // Update bounding box
             if (x < mesh->minBounds[0]) {mesh->minBounds[0] = x;}
