@@ -11,12 +11,15 @@ void freeMeshData(MeshData* mesh)
     if (mesh->vertices) free(mesh->vertices);
     if (mesh->indices) free(mesh->indices);
     if (mesh->triangleMaterials) free(mesh->triangleMaterials);
+    if (mesh->materials) free(mesh->materials);
 
     mesh->vertices = NULL;
     mesh->indices = NULL;
     mesh->triangleMaterials = NULL;
     mesh->vertexCount = 0;
     mesh->indexCount = 0;
+    mesh->materials = NULL;
+    mesh->materialCount = 0;
 }
 
 void calculateMeshNormals(MeshData* mesh)

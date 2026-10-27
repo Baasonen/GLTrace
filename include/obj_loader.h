@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "material.h"
+
 typedef struct 
 {
     float x, y, z;
@@ -24,6 +26,8 @@ typedef struct
     float maxBounds[3];
 
     uint32_t* triangleMaterials;
+    Material* materials;
+    uint32_t materialCount;
 } MeshData;
 
 void calculateMeshNormals(MeshData* mesh);

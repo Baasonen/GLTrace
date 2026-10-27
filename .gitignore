@@ -5,3 +5,8 @@ __pycache__/
 build/
 *.ini
 *.hdr
+*.scene
+*.png
+*.jpeg
+*.jpg
+models/

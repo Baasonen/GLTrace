@@ -5,16 +5,7 @@
 
 #include "obj_loader.h"
 #include "plane_light.h"
-
-typedef struct 
-{
-    float cr, cg, cb;
-    float visibility;
-    float roughness;
-    float metallic;
-    float emission;
-    float opacity;
-} Material;
+#include "material.h"
 
 typedef struct 
 {

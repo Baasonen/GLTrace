@@ -23,6 +23,7 @@
 #include "mouse_select.h"
 #include "plane_light.h"
 #include "hdri.h"
+#include "texture.h"
 
 #ifdef _WIN32
 __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
@@ -66,8 +67,8 @@ int main(int argc, char* argv[])
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
-    // Capture and hide mouse
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    // Capture mosue
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     glfwSetCursorPosCallback(window, mouseCallback);
 
     glfwSetKeyCallback(window, keyCallback);
@@ -109,6 +110,8 @@ int main(int argc, char* argv[])
     g_sphereEditor.selected = 0;
 
     setupSceneData(g_ssbo, &scene);
+    texUpload();
+    texBind();
 
     plInit();
     plLoad(scene.planeLights, scene.planeLightCount);
@@ -406,6 +409,7 @@ int main(int argc, char* argv[])
     glDeleteVertexArrays(1, &vao);
 
     selSceneFree();
+    texFree();
     UIShutdown();
     plShutdown();
     hdriShutdown();

@@ -3,10 +3,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+
+#include "gltf_loader.h"
 
 static void zeroScene(SceneDescription* scene)
 {
     memset(scene, 0, sizeof(SceneDescription));
+}
+
+static int hasExtension(const char* path, const char* ext)
+{
+    size_t lp = strlen(path);
+    size_t le = strlen(ext);
+    if (lp < le) {return 0;}
+
+    for (size_t i = 0; i < le; i++)
+    {
+        if (tolower((unsigned char)path[lp - le + i]) != ext[i]) {return 0;}
+    }
+    return 1;
+}
+
+static int loadMeshFile(const char* path, MeshData* mesh)
+{
+    if (hasExtension(path, ".gltf") || hasExtension(path, ".glb")) {return loadGLTF(path, mesh);}
+    return loadObj(path, mesh);
 }
 
 void freeScene(SceneDescription* scene)
@@ -28,6 +50,23 @@ void freeScene(SceneDescription* scene)
     free(scene->planeLights);
 
     zeroScene(scene);
+}
+
+static int appendSourceMaterials(SceneDescription* scene, MeshData* mesh)
+{
+    if (!mesh->materials || mesh->materialCount == 0) {return 1;}
+
+    int base = scene->materialCount;
+    Material* grown = (Material*)realloc(scene->materials, sizeof(Material) * (base + mesh->materialCount));
+    if (!grown) {return 0;}
+
+    scene->materials = grown;
+    memcpy(&scene->materials[base], mesh->materials, sizeof(Material) * mesh->materialCount);
+    scene->materialCount = base + (int)mesh->materialCount;
+
+    for (uint32_t t = 0; t < mesh->triangleCount; t++) {mesh->triangleMaterials[t] += (uint32_t)base;}
+
+    return 1;
 }
 
 int loadScene(const char* scenePath, SceneDescription* scene)
@@ -77,6 +116,7 @@ int loadScene(const char* scenePath, SceneDescription* scene)
             fclose(file);
             return 0;
         }
+        m->baseTex = m->normalTex = m->mrTex = m->emissiveTex = -1;
     }
 
     if (fscanf(file, "%d", &scene->numberOfSources) != 1)
@@ -98,7 +138,7 @@ int loadScene(const char* scenePath, SceneDescription* scene)
     {
         char path[512];
         
-        if ((fscanf(file, "%511s", path) != 1) || (!loadObj(path, &scene->meshSources[i])))
+        if ((fscanf(file, "%511s", path) != 1) || (!loadMeshFile(path, &scene->meshSources[i])) || (!appendSourceMaterials(scene, &scene->meshSources[i])))
         {
             fprintf(stderr, "Failed to load mesh: %s\n", path);
             freeScene(scene);

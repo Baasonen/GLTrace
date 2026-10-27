@@ -7,6 +7,8 @@ SRC_CXX := $(wildcard src/*.cpp)
 
 IMGUI_DIR := external/imgui
 STB_DIR := external/stb
+STBRS_DIR := external/stb_image_resize
+GLTF_DIR := external/cgltf
 IMGUI_SRC := \
 	$(IMGUI_DIR)/imgui.cpp \
 	$(IMGUI_DIR)/imgui_draw.cpp \
@@ -23,14 +25,14 @@ ifeq ($(OS),Windows_NT)
     GLFW_INC ?= C:/libs/glfw/include
     GLFW_LIB ?= C:/libs/glfw/lib
 
-    INCLUDES := -Iinclude -I$(GLFW_INC) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(STB_DIR)
+    INCLUDES := -Iinclude -I$(GLFW_INC) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(STB_DIR) -I$(GLTF_DIR) -I$(STBRS_DIR)
     CFLAGS   := $(INCLUDES) -Wall -O2
     CXXFLAGS := $(INCLUDES) -Wall -O2 -std=c++17
     LDFLAGS  := -L$(GLFW_LIB)
     LIBS     := -lglfw3 -lopengl32 -lgdi32
     TARGET   := $(TARGET).exe
 else
-    INCLUDES := -Iinclude -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(STB_DIR)
+    INCLUDES := -Iinclude -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(STB_DIR)  -I$(GLTF_DIR) -I$(STBRS_DIR)
     CFLAGS   := $(INCLUDES) -Wall -O2
     CXXFLAGS := $(INCLUDES) -Wall -O2 -std=c++17
     LDFLAGS  :=

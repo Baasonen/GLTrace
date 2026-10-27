@@ -66,9 +66,14 @@ MeshData buildSceneMesh(SceneDescription* scene)
         }
 
         int triangleCount = sourceMesh->indexCount / 3;
-        for (int t = 0; t < triangleCount; t++)
+        for (int t = 0; t < triangleCount; t++) 
         {
-            combinedMesh.triangleMaterials[tOffset + t] = instance->materialIndex;
+            uint32_t mat = 0;
+            // Negative -> use model mat
+            if (instance->materialIndex >= 0) {mat = (uint32_t)instance->materialIndex;}
+            else if (sourceMesh->triangleMaterials) {mat = sourceMesh->triangleMaterials[t];}
+
+            combinedMesh.triangleMaterials[tOffset + t] = mat;
         }
 
         vOffset += sourceMesh->vertexCount;
