@@ -7,3 +7,6 @@
 [submodule "external/cgltf"]
 	path = external/cgltf
 	url = https://github.com/jkuhlmann/cgltf.git
+[submodule "external/stb_image_resize"]
+	path = external/stb_image_resize
+	url = https://github.com/nothings/stb_image_resize.git
